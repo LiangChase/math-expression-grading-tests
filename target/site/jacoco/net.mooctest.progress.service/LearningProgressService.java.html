@@ -1,0 +1,350 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>LearningProgressService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">online-math-expression-grading</a> &gt; <a href="index.source.html" class="el_package">net.mooctest.progress.service</a> &gt; <span class="el_source">LearningProgressService.java</span></div><h1>LearningProgressService.java</h1><pre class="source lang-java linenums">package net.mooctest.progress.service;
+
+import net.mooctest.progress.domain.CourseProgressSnapshot;
+import net.mooctest.progress.domain.LessonProgress;
+import net.mooctest.progress.domain.LessonType;
+import net.mooctest.progress.domain.ProgressEvaluation;
+import org.springframework.stereotype.Service;
+
+import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Objects;
+import java.util.Set;
+
+@Service
+public class LearningProgressService {
+
+    private final Clock clock;
+
+<span class="fc" id="L24">    public LearningProgressService(Clock clock) {</span>
+<span class="fc" id="L25">        this.clock = clock;</span>
+<span class="fc" id="L26">    }</span>
+
+    public ProgressEvaluation evaluate(CourseProgressSnapshot snapshot) {
+<span class="fc" id="L29">        validate(snapshot);</span>
+<span class="fc" id="L30">        List&lt;String&gt; blockers = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L31">        List&lt;String&gt; warnings = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L32">        List&lt;LessonProgress&gt; lessons = snapshot.lessons().stream()</span>
+<span class="fc" id="L33">                .sorted(Comparator.comparingInt(LessonProgress::order))</span>
+<span class="fc" id="L34">                .toList();</span>
+
+<span class="fc" id="L36">        evaluateAccountAndAccess(snapshot, blockers, warnings);</span>
+<span class="fc" id="L37">        int earnedWeight = 0;</span>
+<span class="fc" id="L38">        int totalWeight = 0;</span>
+<span class="fc" id="L39">        int completedLessons = 0;</span>
+<span class="fc" id="L40">        boolean previousComplete = true;</span>
+<span class="fc" id="L41">        String nextLessonId = null;</span>
+<span class="fc" id="L42">        boolean mandatorySatisfied = true;</span>
+
+<span class="fc bfc" id="L44" title="All 2 branches covered.">        for (LessonProgress lesson : lessons) {</span>
+<span class="fc" id="L45">            LessonAssessment assessment = assessLesson(lesson, snapshot.requiredQuizScore(), warnings);</span>
+<span class="fc" id="L46">            totalWeight += assessment.weight();</span>
+<span class="fc" id="L47">            earnedWeight += assessment.earnedWeight();</span>
+
+<span class="fc bfc" id="L49" title="All 2 branches covered.">            if (assessment.complete()) {</span>
+<span class="fc" id="L50">                completedLessons++;</span>
+            }
+<span class="fc bfc" id="L52" title="All 4 branches covered.">            if (lesson.mandatory() &amp;&amp; !assessment.complete()) {</span>
+<span class="fc" id="L53">                mandatorySatisfied = false;</span>
+<span class="fc" id="L54">                blockers.add(&quot;MANDATORY_LESSON_INCOMPLETE:&quot; + lesson.lessonId());</span>
+            }
+<span class="fc bfc" id="L56" title="All 2 branches covered.">            if (lesson.plagiarismFlag()) {</span>
+<span class="fc" id="L57">                blockers.add(&quot;PLAGIARISM_REVIEW:&quot; + lesson.lessonId());</span>
+            }
+<span class="fc bfc" id="L59" title="All 4 branches covered.">            if (lesson.maximumAttempts() &gt; 0 &amp;&amp; lesson.attempts() &gt;= lesson.maximumAttempts()</span>
+<span class="pc bpc" id="L60" title="1 of 2 branches missed.">                    &amp;&amp; !assessment.complete()) {</span>
+<span class="fc" id="L61">                blockers.add(&quot;ATTEMPT_LIMIT_REACHED:&quot; + lesson.lessonId());</span>
+            }
+<span class="fc bfc" id="L63" title="All 4 branches covered.">            if (!lesson.unlocked() &amp;&amp; lesson.completionPercent() &gt; 0) {</span>
+<span class="fc" id="L64">                warnings.add(&quot;LOCKED_LESSON_HAS_PROGRESS:&quot; + lesson.lessonId());</span>
+            }
+<span class="fc bfc" id="L66" title="All 6 branches covered.">            if (snapshot.sequentialLearning() &amp;&amp; !previousComplete &amp;&amp; lesson.unlocked()) {</span>
+<span class="fc" id="L67">                warnings.add(&quot;SEQUENCE_RULE_BYPASSED:&quot; + lesson.lessonId());</span>
+            }
+<span class="fc bfc" id="L69" title="All 6 branches covered.">            if (nextLessonId == null &amp;&amp; !assessment.complete() &amp;&amp; lesson.unlocked()</span>
+<span class="pc bpc" id="L70" title="1 of 4 branches missed.">                    &amp;&amp; (!snapshot.sequentialLearning() || previousComplete)) {</span>
+<span class="fc" id="L71">                nextLessonId = lesson.lessonId();</span>
+            }
+<span class="fc bfc" id="L73" title="All 4 branches covered.">            if (snapshot.sequentialLearning() &amp;&amp; lesson.mandatory()) {</span>
+<span class="fc" id="L74">                previousComplete = assessment.complete();</span>
+<span class="pc bpc" id="L75" title="1 of 4 branches missed.">            } else if (snapshot.sequentialLearning() &amp;&amp; !assessment.complete()) {</span>
+<span class="fc bfc" id="L76" title="All 4 branches covered.">                previousComplete = previousComplete &amp;&amp; lesson.completionPercent() &gt;= 50;</span>
+            }
+<span class="fc" id="L78">        }</span>
+
+<span class="fc bfc" id="L80" title="All 2 branches covered.">        int overallPercent = totalWeight == 0</span>
+<span class="fc" id="L81">                ? 0</span>
+<span class="fc" id="L82">                : Math.min(100, Math.max(0, earnedWeight * 100 / totalWeight));</span>
+<span class="fc bfc" id="L83" title="All 2 branches covered.">        if (lessons.isEmpty()) {</span>
+<span class="fc" id="L84">            blockers.add(&quot;COURSE_HAS_NO_LESSONS&quot;);</span>
+        }
+<span class="fc bfc" id="L86" title="All 2 branches covered.">        if (overallPercent &lt; snapshot.requiredOverallPercent()) {</span>
+<span class="fc" id="L87">            blockers.add(&quot;OVERALL_PROGRESS_BELOW_REQUIRED&quot;);</span>
+        }
+<span class="fc bfc" id="L89" title="All 4 branches covered.">        if (snapshot.finalProjectRequired() &amp;&amp; !hasApprovedProject(lessons)) {</span>
+<span class="fc" id="L90">            blockers.add(&quot;FINAL_PROJECT_NOT_APPROVED&quot;);</span>
+        }
+<span class="fc bfc" id="L92" title="All 4 branches covered.">        if (snapshot.instructorApprovalRequired() &amp;&amp; !hasInstructorApproval(lessons)) {</span>
+<span class="fc" id="L93">            blockers.add(&quot;INSTRUCTOR_APPROVAL_REQUIRED&quot;);</span>
+        }
+
+<span class="fc bfc" id="L96" title="All 2 branches covered.">        boolean completed = !lessons.isEmpty()</span>
+<span class="fc bfc" id="L97" title="All 4 branches covered.">                &amp;&amp; overallPercent &gt;= snapshot.requiredOverallPercent()</span>
+                &amp;&amp; mandatorySatisfied
+<span class="fc bfc" id="L99" title="All 2 branches covered.">                &amp;&amp; noAcademicBlocker(blockers);</span>
+<span class="fc" id="L100">        boolean certificateEligible = evaluateCertificate(snapshot, completed, blockers, warnings);</span>
+
+<span class="fc bfc" id="L102" title="All 4 branches covered.">        if (completed &amp;&amp; nextLessonId != null) {</span>
+<span class="fc" id="L103">            warnings.add(&quot;COMPLETION_STATE_CONFLICT&quot;);</span>
+        }
+<span class="fc bfc" id="L105" title="All 6 branches covered.">        if (!completed &amp;&amp; nextLessonId == null &amp;&amp; !lessons.isEmpty()) {</span>
+<span class="fc" id="L106">            warnings.add(&quot;NO_ACCESSIBLE_NEXT_LESSON&quot;);</span>
+        }
+
+<span class="fc" id="L109">        return new ProgressEvaluation(</span>
+                overallPercent,
+                completedLessons,
+<span class="fc" id="L112">                lessons.size(),</span>
+                completed,
+                certificateEligible,
+                nextLessonId,
+                blockers,
+                warnings
+        );
+    }
+
+    private LessonAssessment assessLesson(
+            LessonProgress lesson,
+            int requiredQuizScore,
+            List&lt;String&gt; warnings
+    ) {
+<span class="fc bfc" id="L126" title="All 6 branches covered.">        int weight = switch (lesson.type()) {</span>
+<span class="fc" id="L127">            case VIDEO -&gt; 15;</span>
+<span class="fc" id="L128">            case ARTICLE -&gt; 10;</span>
+<span class="fc" id="L129">            case QUIZ -&gt; 20;</span>
+<span class="fc" id="L130">            case ASSIGNMENT -&gt; 25;</span>
+<span class="fc" id="L131">            case LIVE_SESSION -&gt; 20;</span>
+<span class="fc" id="L132">            case PROJECT -&gt; 30;</span>
+        };
+
+        boolean complete;
+        int earned;
+<span class="pc bpc" id="L137" title="1 of 7 branches missed.">        switch (lesson.type()) {</span>
+            case VIDEO -&gt; {
+<span class="fc bfc" id="L139" title="All 2 branches covered.">                complete = lesson.completionPercent() &gt;= 90;</span>
+<span class="fc" id="L140">                earned = weight * Math.min(100, lesson.completionPercent()) / 100;</span>
+<span class="fc bfc" id="L141" title="All 4 branches covered.">                if (lesson.completionPercent() &gt;= 70 &amp;&amp; lesson.completionPercent() &lt; 90) {</span>
+<span class="fc" id="L142">                    warnings.add(&quot;VIDEO_NEAR_COMPLETION:&quot; + lesson.lessonId());</span>
+                }
+            }
+            case ARTICLE -&gt; {
+<span class="fc bfc" id="L146" title="All 2 branches covered.">                complete = lesson.completionPercent() &gt;= 100;</span>
+<span class="fc bfc" id="L147" title="All 2 branches covered.">                earned = complete ? weight : weight * lesson.completionPercent() / 100;</span>
+<span class="fc" id="L148">            }</span>
+            case QUIZ -&gt; {
+<span class="fc bfc" id="L150" title="All 4 branches covered.">                complete = lesson.submitted() &amp;&amp; lesson.score() &gt;= requiredQuizScore;</span>
+<span class="fc bfc" id="L151" title="All 2 branches covered.">                earned = lesson.submitted() ? weight * lesson.score() / 100 : 0;</span>
+<span class="fc bfc" id="L152" title="All 4 branches covered.">                if (lesson.submitted() &amp;&amp; lesson.score() &lt; requiredQuizScore) {</span>
+<span class="fc" id="L153">                    warnings.add(&quot;QUIZ_SCORE_TOO_LOW:&quot; + lesson.lessonId());</span>
+                }
+            }
+            case ASSIGNMENT -&gt; {
+<span class="fc bfc" id="L157" title="All 4 branches covered.">                complete = lesson.submitted() &amp;&amp; lesson.approved();</span>
+<span class="fc bfc" id="L158" title="All 4 branches covered.">                earned = !lesson.submitted() ? 0 : lesson.approved() ? weight : weight / 2;</span>
+<span class="fc bfc" id="L159" title="All 4 branches covered.">                if (lesson.submitted() &amp;&amp; !lesson.approved()) {</span>
+<span class="fc" id="L160">                    warnings.add(&quot;ASSIGNMENT_AWAITING_REVISION:&quot; + lesson.lessonId());</span>
+                }
+            }
+            case LIVE_SESSION -&gt; {
+<span class="fc bfc" id="L164" title="All 2 branches covered.">                complete = lesson.requiredMinutes() == 0</span>
+<span class="fc bfc" id="L165" title="All 2 branches covered.">                        ? lesson.attendedMinutes() &gt; 0</span>
+<span class="fc bfc" id="L166" title="All 2 branches covered.">                        : lesson.attendedMinutes() * 100 / lesson.requiredMinutes() &gt;= 80;</span>
+<span class="fc bfc" id="L167" title="All 2 branches covered.">                earned = lesson.requiredMinutes() == 0</span>
+<span class="fc bfc" id="L168" title="All 2 branches covered.">                        ? (lesson.attendedMinutes() &gt; 0 ? weight : 0)</span>
+<span class="fc" id="L169">                        : weight * Math.min(lesson.attendedMinutes(), lesson.requiredMinutes())</span>
+<span class="fc" id="L170">                        / lesson.requiredMinutes();</span>
+<span class="fc bfc" id="L171" title="All 4 branches covered.">                if (!complete &amp;&amp; lesson.attendedMinutes() &gt; 0) {</span>
+<span class="fc" id="L172">                    warnings.add(&quot;LIVE_ATTENDANCE_TOO_SHORT:&quot; + lesson.lessonId());</span>
+                }
+            }
+            case PROJECT -&gt; {
+<span class="pc bpc" id="L176" title="1 of 6 branches missed.">                complete = lesson.submitted() &amp;&amp; lesson.approved() &amp;&amp; !lesson.plagiarismFlag();</span>
+<span class="fc bfc" id="L177" title="All 4 branches covered.">                earned = complete ? weight : lesson.submitted() ? weight / 3 : 0;</span>
+<span class="fc bfc" id="L178" title="All 4 branches covered.">                if (lesson.submitted() &amp;&amp; lesson.plagiarismFlag()) {</span>
+<span class="fc" id="L179">                    warnings.add(&quot;PROJECT_HELD_FOR_INTEGRITY_REVIEW:&quot; + lesson.lessonId());</span>
+                }
+            }
+<span class="nc" id="L182">            default -&gt; throw new IllegalStateException(&quot;Unsupported lesson type: &quot; + lesson.type());</span>
+        }
+<span class="fc" id="L184">        earned = Math.max(0, Math.min(weight, earned));</span>
+<span class="fc" id="L185">        return new LessonAssessment(weight, earned, complete);</span>
+    }
+
+    private void evaluateAccountAndAccess(
+            CourseProgressSnapshot snapshot,
+            List&lt;String&gt; blockers,
+            List&lt;String&gt; warnings
+    ) {
+<span class="fc" id="L193">        Instant now = Instant.now(clock);</span>
+<span class="fc bfc" id="L194" title="All 2 branches covered.">        if (!snapshot.coursePublished()) {</span>
+<span class="fc" id="L195">            blockers.add(&quot;COURSE_NOT_PUBLISHED&quot;);</span>
+        }
+<span class="fc bfc" id="L197" title="All 2 branches covered.">        if (snapshot.accountSuspended()) {</span>
+<span class="fc" id="L198">            blockers.add(&quot;ACCOUNT_SUSPENDED&quot;);</span>
+        }
+<span class="fc bfc" id="L200" title="All 2 branches covered.">        if (!snapshot.subscriptionActive()) {</span>
+<span class="fc" id="L201">            blockers.add(&quot;SUBSCRIPTION_INACTIVE&quot;);</span>
+        }
+<span class="fc bfc" id="L203" title="All 2 branches covered.">        if (!snapshot.codeOfConductAccepted()) {</span>
+<span class="fc" id="L204">            blockers.add(&quot;CODE_OF_CONDUCT_NOT_ACCEPTED&quot;);</span>
+        }
+<span class="pc bpc" id="L206" title="1 of 4 branches missed.">        if (snapshot.enrolledAt() != null &amp;&amp; snapshot.enrolledAt().isAfter(now)) {</span>
+<span class="fc" id="L207">            blockers.add(&quot;ENROLLMENT_DATE_IN_FUTURE&quot;);</span>
+        }
+<span class="pc bpc" id="L209" title="1 of 4 branches missed.">        if (snapshot.accessExpiresAt() != null &amp;&amp; now.isAfter(snapshot.accessExpiresAt())) {</span>
+<span class="fc" id="L210">            blockers.add(&quot;COURSE_ACCESS_EXPIRED&quot;);</span>
+<span class="pc bpc" id="L211" title="1 of 2 branches missed.">        } else if (snapshot.accessExpiresAt() != null</span>
+<span class="fc bfc" id="L212" title="All 2 branches covered.">                &amp;&amp; Duration.between(now, snapshot.accessExpiresAt()).toDays() &lt;= 7) {</span>
+<span class="fc" id="L213">            warnings.add(&quot;COURSE_ACCESS_EXPIRES_SOON&quot;);</span>
+        }
+<span class="fc bfc" id="L215" title="All 2 branches covered.">        if (!snapshot.identityVerified()) {</span>
+<span class="fc" id="L216">            warnings.add(&quot;IDENTITY_NOT_VERIFIED&quot;);</span>
+        }
+<span class="fc bfc" id="L218" title="All 2 branches covered.">        if (snapshot.outstandingBalance()) {</span>
+<span class="fc" id="L219">            warnings.add(&quot;OUTSTANDING_BALANCE&quot;);</span>
+        }
+<span class="fc" id="L221">    }</span>
+
+    private boolean evaluateCertificate(
+            CourseProgressSnapshot snapshot,
+            boolean completed,
+            List&lt;String&gt; blockers,
+            List&lt;String&gt; warnings
+    ) {
+<span class="fc bfc" id="L229" title="All 2 branches covered.">        if (!snapshot.certificateEnabled()) {</span>
+<span class="fc" id="L230">            warnings.add(&quot;CERTIFICATE_DISABLED&quot;);</span>
+<span class="fc" id="L231">            return false;</span>
+        }
+<span class="fc bfc" id="L233" title="All 2 branches covered.">        if (!completed) {</span>
+<span class="fc" id="L234">            return false;</span>
+        }
+<span class="fc bfc" id="L236" title="All 2 branches covered.">        if (!snapshot.identityVerified()) {</span>
+<span class="fc" id="L237">            blockers.add(&quot;CERTIFICATE_REQUIRES_IDENTITY_VERIFICATION&quot;);</span>
+<span class="fc" id="L238">            return false;</span>
+        }
+<span class="fc bfc" id="L240" title="All 2 branches covered.">        if (snapshot.outstandingBalance()) {</span>
+<span class="fc" id="L241">            blockers.add(&quot;CERTIFICATE_BLOCKED_BY_BALANCE&quot;);</span>
+<span class="fc" id="L242">            return false;</span>
+        }
+<span class="fc bfc" id="L244" title="All 4 branches covered.">        if (snapshot.certificateName() == null || snapshot.certificateName().isBlank()) {</span>
+<span class="fc" id="L245">            blockers.add(&quot;CERTIFICATE_NAME_REQUIRED&quot;);</span>
+<span class="fc" id="L246">            return false;</span>
+        }
+<span class="fc bfc" id="L248" title="All 4 branches covered.">        if (snapshot.certificateName().length() &lt; 2 || snapshot.certificateName().length() &gt; 80) {</span>
+<span class="fc" id="L249">            blockers.add(&quot;CERTIFICATE_NAME_LENGTH_INVALID&quot;);</span>
+<span class="fc" id="L250">            return false;</span>
+        }
+<span class="fc" id="L252">        return true;</span>
+    }
+
+    private boolean hasApprovedProject(List&lt;LessonProgress&gt; lessons) {
+<span class="fc bfc" id="L256" title="All 2 branches covered.">        return lessons.stream().anyMatch(lesson -&gt; lesson.type() == LessonType.PROJECT</span>
+<span class="pc bpc" id="L257" title="1 of 2 branches missed.">                &amp;&amp; lesson.submitted()</span>
+<span class="pc bpc" id="L258" title="1 of 2 branches missed.">                &amp;&amp; lesson.approved()</span>
+<span class="pc bpc" id="L259" title="1 of 2 branches missed.">                &amp;&amp; !lesson.plagiarismFlag());</span>
+    }
+
+    private boolean hasInstructorApproval(List&lt;LessonProgress&gt; lessons) {
+<span class="fc" id="L263">        return lessons.stream().filter(LessonProgress::mandatory)</span>
+<span class="fc bfc" id="L264" title="All 4 branches covered.">                .allMatch(lesson -&gt; lesson.type() != LessonType.ASSIGNMENT || lesson.approved());</span>
+    }
+
+    private boolean noAcademicBlocker(List&lt;String&gt; blockers) {
+<span class="fc bfc" id="L268" title="All 2 branches covered.">        return blockers.stream().noneMatch(blocker -&gt; blocker.startsWith(&quot;PLAGIARISM_REVIEW&quot;)</span>
+<span class="fc bfc" id="L269" title="All 2 branches covered.">                || blocker.startsWith(&quot;ATTEMPT_LIMIT_REACHED&quot;)</span>
+<span class="fc bfc" id="L270" title="All 2 branches covered.">                || blocker.equals(&quot;FINAL_PROJECT_NOT_APPROVED&quot;)</span>
+<span class="pc bpc" id="L271" title="1 of 2 branches missed.">                || blocker.equals(&quot;INSTRUCTOR_APPROVAL_REQUIRED&quot;));</span>
+    }
+
+    private void validate(CourseProgressSnapshot snapshot) {
+<span class="fc" id="L275">        Objects.requireNonNull(snapshot, &quot;snapshot must not be null&quot;);</span>
+<span class="pc bpc" id="L276" title="1 of 4 branches missed.">        if (snapshot.studentId() == null || snapshot.studentId().isBlank()) {</span>
+<span class="fc" id="L277">            throw new IllegalArgumentException(&quot;studentId must not be blank&quot;);</span>
+        }
+<span class="pc bpc" id="L279" title="1 of 4 branches missed.">        if (snapshot.courseId() == null || snapshot.courseId().isBlank()) {</span>
+<span class="fc" id="L280">            throw new IllegalArgumentException(&quot;courseId must not be blank&quot;);</span>
+        }
+<span class="fc bfc" id="L282" title="All 4 branches covered.">        if (snapshot.requiredOverallPercent() &lt; 0 || snapshot.requiredOverallPercent() &gt; 100) {</span>
+<span class="fc" id="L283">            throw new IllegalArgumentException(&quot;requiredOverallPercent must be between 0 and 100&quot;);</span>
+        }
+<span class="fc bfc" id="L285" title="All 4 branches covered.">        if (snapshot.requiredQuizScore() &lt; 0 || snapshot.requiredQuizScore() &gt; 100) {</span>
+<span class="fc" id="L286">            throw new IllegalArgumentException(&quot;requiredQuizScore must be between 0 and 100&quot;);</span>
+        }
+<span class="fc" id="L288">        Set&lt;String&gt; ids = new HashSet&lt;&gt;();</span>
+<span class="fc" id="L289">        Set&lt;Integer&gt; orders = new HashSet&lt;&gt;();</span>
+<span class="fc bfc" id="L290" title="All 2 branches covered.">        for (LessonProgress lesson : snapshot.lessons()) {</span>
+<span class="fc" id="L291">            Objects.requireNonNull(lesson, &quot;lesson must not be null&quot;);</span>
+<span class="pc bpc" id="L292" title="1 of 4 branches missed.">            if (lesson.lessonId() == null || lesson.lessonId().isBlank()) {</span>
+<span class="fc" id="L293">                throw new IllegalArgumentException(&quot;lessonId must not be blank&quot;);</span>
+            }
+<span class="fc bfc" id="L295" title="All 2 branches covered.">            if (!ids.add(lesson.lessonId())) {</span>
+<span class="fc" id="L296">                throw new IllegalArgumentException(&quot;lessonId must be unique&quot;);</span>
+            }
+<span class="fc bfc" id="L298" title="All 2 branches covered.">            if (!orders.add(lesson.order())) {</span>
+<span class="fc" id="L299">                throw new IllegalArgumentException(&quot;lesson order must be unique&quot;);</span>
+            }
+<span class="fc bfc" id="L301" title="All 2 branches covered.">            if (lesson.type() == null) {</span>
+<span class="fc" id="L302">                throw new IllegalArgumentException(&quot;lesson type must not be null&quot;);</span>
+            }
+<span class="fc bfc" id="L304" title="All 2 branches covered.">            if (lesson.order() &lt; 0) {</span>
+<span class="fc" id="L305">                throw new IllegalArgumentException(&quot;lesson order must not be negative&quot;);</span>
+            }
+<span class="fc bfc" id="L307" title="All 4 branches covered.">            if (lesson.completionPercent() &lt; 0 || lesson.completionPercent() &gt; 100) {</span>
+<span class="fc" id="L308">                throw new IllegalArgumentException(&quot;completionPercent must be between 0 and 100&quot;);</span>
+            }
+<span class="fc bfc" id="L310" title="All 4 branches covered.">            if (lesson.score() &lt; 0 || lesson.score() &gt; 100) {</span>
+<span class="fc" id="L311">                throw new IllegalArgumentException(&quot;score must be between 0 and 100&quot;);</span>
+            }
+<span class="fc bfc" id="L313" title="All 4 branches covered.">            if (lesson.attempts() &lt; 0 || lesson.maximumAttempts() &lt; 0) {</span>
+<span class="fc" id="L314">                throw new IllegalArgumentException(&quot;attempt counts must not be negative&quot;);</span>
+            }
+<span class="fc bfc" id="L316" title="All 4 branches covered.">            if (lesson.maximumAttempts() &gt; 0 &amp;&amp; lesson.attempts() &gt; lesson.maximumAttempts()) {</span>
+<span class="fc" id="L317">                throw new IllegalArgumentException(&quot;attempts must not exceed maximumAttempts&quot;);</span>
+            }
+<span class="fc bfc" id="L319" title="All 4 branches covered.">            if (lesson.attendedMinutes() &lt; 0 || lesson.requiredMinutes() &lt; 0) {</span>
+<span class="fc" id="L320">                throw new IllegalArgumentException(&quot;attendance minutes must not be negative&quot;);</span>
+            }
+<span class="fc" id="L322">        }</span>
+<span class="fc" id="L323">    }</span>
+
+    private static final class LessonAssessment {
+
+        private final int weight;
+        private final int earnedWeight;
+        private final boolean complete;
+
+<span class="fc" id="L331">        private LessonAssessment(int weight, int earnedWeight, boolean complete) {</span>
+<span class="fc" id="L332">            this.weight = weight;</span>
+<span class="fc" id="L333">            this.earnedWeight = earnedWeight;</span>
+<span class="fc" id="L334">            this.complete = complete;</span>
+<span class="fc" id="L335">        }</span>
+
+        private int weight() {
+<span class="fc" id="L338">            return weight;</span>
+        }
+
+        private int earnedWeight() {
+<span class="fc" id="L342">            return earnedWeight;</span>
+        }
+
+        private boolean complete() {
+<span class="fc" id="L346">            return complete;</span>
+        }
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

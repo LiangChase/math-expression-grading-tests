@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ExpressionAnswerGradingService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">online-math-expression-grading</a> &gt; <a href="index.source.html" class="el_package">net.mooctest.grading.expression</a> &gt; <span class="el_source">ExpressionAnswerGradingService.java</span></div><h1>ExpressionAnswerGradingService.java</h1><pre class="source lang-java linenums">package net.mooctest.grading.expression;
+
+import net.mooctest.grading.domain.AnswerResult;
+import net.mooctest.grading.domain.QuestionType;
+
+import java.math.BigDecimal;
+import java.util.Objects;
+
+public class ExpressionAnswerGradingService {
+
+    private final ExpressionEvaluator evaluator;
+
+<span class="fc" id="L13">    public ExpressionAnswerGradingService(ExpressionEvaluator evaluator) {</span>
+<span class="fc" id="L14">        this.evaluator = Objects.requireNonNull(evaluator, &quot;evaluator must not be null&quot;);</span>
+<span class="fc" id="L15">    }</span>
+
+    public ExpressionAnswerEvaluation evaluate(ExpressionAnswerSubmission submission) {
+<span class="fc" id="L18">        Objects.requireNonNull(submission, &quot;submission must not be null&quot;);</span>
+<span class="fc" id="L19">        ExpressionQuestion question = submission.question();</span>
+<span class="fc" id="L20">        String submittedExpression = submission.submittedExpression();</span>
+
+<span class="fc bfc" id="L22" title="All 4 branches covered.">        if (submittedExpression == null || submittedExpression.isBlank()) {</span>
+<span class="fc" id="L23">            return new ExpressionAnswerEvaluation(</span>
+<span class="fc" id="L24">                    answerResult(question, false, false, null),</span>
+                    ExpressionAnswerStatus.UNANSWERED,
+                    null,
+                    null,
+                    null,
+                    &quot;ANSWER_NOT_PROVIDED&quot;
+            );
+        }
+
+        BigDecimal expectedValue;
+        try {
+<span class="fc" id="L35">            expectedValue = evaluator.evaluate(question.correctExpression());</span>
+<span class="fc" id="L36">        } catch (ExpressionEvaluationException exception) {</span>
+<span class="fc" id="L37">            throw new IllegalStateException(</span>
+<span class="fc" id="L38">                    &quot;invalid correct expression for question &quot; + question.questionId(),</span>
+                    exception
+            );
+<span class="fc" id="L41">        }</span>
+
+        BigDecimal actualValue;
+        try {
+<span class="fc" id="L45">            actualValue = evaluator.evaluate(submittedExpression);</span>
+<span class="fc" id="L46">        } catch (ExpressionEvaluationException exception) {</span>
+<span class="fc" id="L47">            return new ExpressionAnswerEvaluation(</span>
+<span class="fc" id="L48">                    answerResult(question, true, false, null),</span>
+                    ExpressionAnswerStatus.INVALID_EXPRESSION,
+                    expectedValue,
+                    null,
+                    null,
+                    &quot;INVALID_STUDENT_EXPRESSION&quot;
+            );
+<span class="fc" id="L55">        }</span>
+
+<span class="fc" id="L57">        BigDecimal absoluteError = actualValue.subtract(expectedValue).abs();</span>
+<span class="fc bfc" id="L58" title="All 2 branches covered.">        boolean exact = absoluteError.compareTo(BigDecimal.ZERO) == 0;</span>
+        ExpressionAnswerStatus status;
+<span class="fc bfc" id="L60" title="All 2 branches covered.">        if (exact) {</span>
+<span class="fc" id="L61">            status = ExpressionAnswerStatus.EXACT;</span>
+<span class="fc bfc" id="L62" title="All 2 branches covered.">        } else if (absoluteError.compareTo(question.tolerance()) &lt;= 0) {</span>
+<span class="fc" id="L63">            status = ExpressionAnswerStatus.WITHIN_TOLERANCE;</span>
+        } else {
+<span class="fc" id="L65">            status = ExpressionAnswerStatus.INCORRECT;</span>
+        }
+
+<span class="fc" id="L68">        return new ExpressionAnswerEvaluation(</span>
+<span class="fc" id="L69">                answerResult(question, true, exact, absoluteError),</span>
+                status,
+                expectedValue,
+                actualValue,
+                absoluteError,
+<span class="fc" id="L74">                status.name()</span>
+        );
+    }
+
+    private AnswerResult answerResult(
+            ExpressionQuestion question,
+            boolean answered,
+            boolean exactMatch,
+            BigDecimal numericError
+    ) {
+<span class="fc" id="L84">        return new AnswerResult(</span>
+<span class="fc" id="L85">                question.questionId(),</span>
+                QuestionType.NUMERIC,
+<span class="fc" id="L87">                question.section(),</span>
+<span class="fc" id="L88">                question.maximumPoints(),</span>
+<span class="fc" id="L89">                question.mandatory(),</span>
+                answered,
+                exactMatch,
+                0,
+                0,
+                0,
+                numericError,
+<span class="fc" id="L96">                question.tolerance(),</span>
+                0,
+                0,
+                0,
+                false,
+                false,
+                false,
+                false
+        );
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

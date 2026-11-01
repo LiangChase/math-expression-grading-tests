@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>NumberCalculation.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">online-math-expression-grading</a> &gt; <a href="index.source.html" class="el_package">net.mooctest.expression.engine</a> &gt; <span class="el_source">NumberCalculation.java</span></div><h1>NumberCalculation.java</h1><pre class="source lang-java linenums">package net.mooctest.expression.engine;
+
+/**
+ * 计算结果为数值的数学表达式结果，其中提供了数学表达式的计算函数
+ * &lt;p&gt;
+ * The calculation result is the numerical mathematical expression result, in which the calculation function of the mathematical expression is provided
+ *
+ * @author zhao
+ */
+public abstract class NumberCalculation implements Calculation {
+    protected final String Name;
+
+<span class="fc" id="L13">    protected NumberCalculation(String name) {</span>
+<span class="fc" id="L14">        Name = name;</span>
+<span class="fc" id="L15">    }</span>
+
+    /**
+     * 计算一个数学表达式，并将计算细节与计算结果存储到数值结果集中。
+     * &lt;p&gt;
+     * Compute a mathematical expression and store the calculation details and results in the numerical result set.
+     *
+     * @param Formula        被计算的表达式，要求返回值是一个数值。
+     *                       &lt;p&gt;
+     *                       The returned value of the evaluated expression is required to be a numeric value.
+     * @param formatRequired 是否需要被格式化，用于确保公式格式正确。
+     *                       &lt;p&gt;
+     *                       Whether it needs to be formatted to ensure that the formula format is correct.
+     * @return 数值结果集对象，其中保存着每一步的操作数据，以及最终结果数值
+     * &lt;p&gt;
+     * Numerical result set object, which stores the operation data of each step and the final result value
+     */
+    public abstract CalculationNumberResults calculation(String Formula, boolean formatRequired);
+
+    /**
+     * 计算一个数学表达式，并将计算细节与计算结果存储到数值结果集中。
+     * &lt;p&gt;
+     * Compute a mathematical expression and store the calculation details and results in the numerical result set.
+     *
+     * @param Formula 被计算的表达式，要求返回值是一个数值。
+     *                &lt;p&gt;
+     *                The returned value of the evaluated expression is required to be a numeric value.
+     * @return 数值结果对象，该返回值是一个专用于存储数值计算结果的包装类，其中有着计算数据的记录以及结果的保存，可以直接获取到
+     * &lt;p&gt;
+     * Numerical result object. The returned value is a wrapper class dedicated to storing numerical calculation results. It contains the records of calculation data and the saving of results, which can be directly obtained
+     * @see CalculationNumberResults
+     */
+    public CalculationNumberResults calculation(String Formula) {
+<span class="fc" id="L48">        return calculation(Formula, true);</span>
+    }
+
+    /**
+     * 检查公式格式是否正确，如果不正确就会抛出一个异常
+     * &lt;p&gt;
+     * Check whether the formula format is correct. If not, an exception will be thrown
+     *
+     * @param string 需要被判断格式的数学运算公式
+     *               &lt;p&gt;
+     *               Mathematical operation formula of the format to be judged
+     */
+    @Override
+    public void check(String string) throws WrongFormat {
+<span class="fc bfc" id="L62" title="All 2 branches covered.">        if (string.isEmpty()) {</span>
+<span class="fc" id="L63">            throw new WrongFormat(&quot;您传入的表达式为空字符串 无法进行计算。&quot;);</span>
+        }
+<span class="fc" id="L65">        int lastIndex = string.length() - 1;</span>
+        // 左括号出现数量
+<span class="fc" id="L67">        int LeftCount = 0;</span>
+        // 右括号出现数量
+        int RightCount;
+        {
+<span class="fc" id="L71">            char lastChar = string.charAt(lastIndex);</span>
+<span class="fc bfc" id="L72" title="All 2 branches covered.">            while (lastChar == ConstantRegion.EMPTY) {</span>
+<span class="fc" id="L73">                lastChar = string.charAt(--lastIndex);</span>
+            }
+<span class="pc bpc" id="L75" title="1 of 4 branches missed.">            if (!StrUtils.IsANumber(lastChar) &amp;&amp; lastChar != ConstantRegion.FACTORIAL_SIGN) {</span>
+<span class="fc bfc" id="L76" title="All 2 branches covered.">                if (lastChar != ConstantRegion.RIGHT_BRACKET) {</span>
+<span class="fc" id="L77">                    throw new WrongFormat(&quot;您传入的表达式格式有误，最后一个字符不是一个数值！！！\nThe format of the expression you passed in is incorrect. The last character is not a numeric value!!!\nERROR =&gt; &quot; + lastChar + &quot; in &quot; + string);</span>
+                } else {
+<span class="fc" id="L79">                    RightCount = 1;</span>
+                }
+            } else {
+<span class="fc" id="L82">                RightCount = 0;</span>
+            }
+        }
+        // 上一个字符是否是运算符
+<span class="fc" id="L86">        boolean is = false;</span>
+<span class="fc bfc" id="L87" title="All 2 branches covered.">        for (int i = 0; i &lt; lastIndex; i++) {</span>
+<span class="fc" id="L88">            char c = string.charAt(i);</span>
+<span class="pc bpc" id="L89" title="1 of 3 branches missed.">            switch (c) {</span>
+                case ConstantRegion.LEFT_BRACKET:
+<span class="fc" id="L91">                    ++LeftCount;</span>
+<span class="fc" id="L92">                    break;</span>
+                case ConstantRegion.RIGHT_BRACKET:
+<span class="nc" id="L94">                    ++RightCount;</span>
+<span class="nc" id="L95">                    break;</span>
+                default:
+<span class="fc" id="L97">                    boolean isOk = StrUtils.IsANumber(c);</span>
+<span class="fc bfc" id="L98" title="All 2 branches covered.">                    if (isOk) {</span>
+                        // 当前是数值
+<span class="fc" id="L100">                        is = false;</span>
+<span class="fc" id="L101">                        continue;</span>
+                    }
+<span class="fc bfc" id="L103" title="All 2 branches covered.">                    switch (c) {</span>
+                        case ConstantRegion.FACTORIAL_SIGN:
+                        case ConstantRegion.DECIMAL_POINT:
+                        case ConstantRegion.EMPTY:
+<span class="fc" id="L107">                            isOk = true;</span>
+                            break;
+                    }
+<span class="fc bfc" id="L110" title="All 2 branches covered.">                    if (isOk) {</span>
+<span class="fc" id="L111">                        is = false;</span>
+<span class="fc" id="L112">                        continue;</span>
+                    }
+                    // 当前字符不是数值 也不是 . - !
+<span class="fc bfc" id="L115" title="All 2 branches covered.">                    if (!StrUtils.IsAnOperator(c)) {</span>
+                        // 当前不是数值 不是一个运算符 也不是 运算符中的 . - !
+<span class="fc" id="L117">                        throw new WrongFormat(&quot;解析表达式的时候出现了未知符号!!!\nUnknown symbol appears when parsing expression!!!\nWrong format =&gt; [&quot; + c + &quot;] from &quot; + string);</span>
+                    } else {
+                        // 当前是运算符，但是上一个字符有可能是 . - !以及数值
+<span class="fc bfc" id="L120" title="All 6 branches covered.">                        if (is &amp;&amp; c != ConstantRegion.MINUS_SIGN &amp;&amp; c != ConstantRegion.PLUS_SIGN) {</span>
+                            // 上一个是运算符 而当前也是运算符 所以直接报错
+<span class="fc" id="L122">                            throw new WrongFormat(&quot;您的数学表达式不正确，缺失了一个运算数值或多出了一个运算符。ERROR =&gt; &quot; + c + &quot; in &quot; + string);</span>
+                        }
+                        // 当前是运算符
+<span class="fc" id="L125">                        is = true;</span>
+                    }
+            }
+        }
+<span class="fc bfc" id="L129" title="All 2 branches covered.">        if (LeftCount != RightCount) {</span>
+<span class="fc" id="L130">            int abs = Math.abs(LeftCount - RightCount);</span>
+<span class="fc" id="L131">            throw new WrongFormat(&quot;您的格式不正确，出现了数学表达式中不正确的括号对数，请您检查是否缺少或者多出了[&quot; + abs + &quot;]个括号。\n&quot; +</span>
+                    &quot;Your format is incorrect. There are incorrect parenthesis logarithms in the mathematical expression. Please check whether [&quot; + abs + &quot;] parentheses are missing or extra.\n&quot; +
+                    &quot;Wrong from [&quot; + string + &quot;]&quot;);
+        }
+<span class="fc" id="L135">    }</span>
+
+    /**
+     * @return 计算组件的名称
+     */
+    @Override
+    public String getName() {
+<span class="fc" id="L142">        return Name;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>CalculationOptimized.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">online-math-expression-grading</a> &gt; <a href="index.source.html" class="el_package">net.mooctest.expression.engine</a> &gt; <span class="el_source">CalculationOptimized.java</span></div><h1>CalculationOptimized.java</h1><pre class="source lang-java linenums">package net.mooctest.expression.engine;
+
+import java.math.BigDecimal;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.function.BiFunction;
+
+/**
+ * 特殊 BigDecimal 计算类
+ *
+ * @author zhao
+ */
+<span class="nc" id="L13">public final class CalculationOptimized {</span>
+    private static final Map&lt;Character, BiFunction&lt;BigDecimal, BigDecimal, BigDecimal&gt;&gt; OPERATION_MAP;
+
+    static {
+<span class="fc" id="L17">        OPERATION_MAP = new HashMap&lt;&gt;();</span>
+<span class="fc" id="L18">        OPERATION_MAP.put('+', BigDecimal::add);</span>
+<span class="fc" id="L19">        OPERATION_MAP.put('-', BigDecimal::subtract);</span>
+<span class="fc" id="L20">        OPERATION_MAP.put('*', BigDecimal::multiply);</span>
+<span class="fc" id="L21">        OPERATION_MAP.put('/', BigDecimal::divide);</span>
+<span class="fc" id="L22">        OPERATION_MAP.put('%', BigDecimal::remainder);</span>
+<span class="fc" id="L23">        OPERATION_MAP.put('^', (a, b) -&gt; a.pow((int) b.doubleValue()));</span>
+<span class="fc" id="L24">    }</span>
+
+    /**
+     * 计算
+     *
+     * @param CalculationType 当前两个操作数之中的计算类型，通常情况下这里是操作符
+     * @param an              第一个操作数
+     * @param bn              第二个操作数
+     * @return 计算结果
+     */
+    public static BigDecimal calculation(char CalculationType, BigDecimal an, BigDecimal bn) {
+<span class="fc" id="L35">        BiFunction&lt;BigDecimal, BigDecimal, BigDecimal&gt; operation = OPERATION_MAP.get(CalculationType);</span>
+<span class="fc bfc" id="L36" title="All 2 branches covered.">        if (operation == null) {</span>
+<span class="fc" id="L37">            throw new AbnormalOperation(&quot;操作数计算异常，您的计算模式不存在，错误的计算模式 = [&quot; + CalculationType + &quot;]&quot;);</span>
+        }
+<span class="fc" id="L39">        return operation.apply(an, bn);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

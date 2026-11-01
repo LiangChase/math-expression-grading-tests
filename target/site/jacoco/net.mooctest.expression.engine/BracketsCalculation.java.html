@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>BracketsCalculation.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">online-math-expression-grading</a> &gt; <a href="index.source.html" class="el_package">net.mooctest.expression.engine</a> &gt; <span class="el_source">BracketsCalculation.java</span></div><h1>BracketsCalculation.java</h1><pre class="source lang-java linenums">package net.mooctest.expression.engine;
+
+import java.util.regex.Pattern;
+
+/**
+ * 括号解析算法计算一个公式的计算组件的父类，其中的计算具体实现是一个抽象，等待实现
+ * &lt;p&gt;
+ * The bracket parsing algorithm calculates the parent class of the calculation component of a formula, in which the specific implementation of the calculation is an abstract, waiting to be implemented
+ *
+ * @author zhao
+ */
+public abstract class BracketsCalculation extends NumberCalculation {
+
+    /**
+     * 正则表达式对象，用于将所有的不可见字符删除
+     */
+<span class="fc" id="L17">    protected final static Pattern ALL_INVISIBLE_CHARACTERS_PATTERN = Pattern.compile(&quot;\\s+&quot;);</span>
+
+    protected BracketsCalculation(String name) {
+<span class="fc" id="L20">        super(name);</span>
+<span class="fc" id="L21">    }</span>
+
+    /**
+     * 格式化一个公式 使得其可以被该计算组件进行运算，这里是将字符串格式化成为能够被括号解析组件计算的公式
+     * &lt;p&gt;
+     * Format a formula so that it can be calculated by the calculation component. Here is to format the string into a formula that can be calculated by the bracket resolution component
+     *
+     * @param string 数学运算公式
+     * @return 格式化之后的数学运算公式
+     */
+    @Override
+    public String formatStr(String string) {
+<span class="fc" id="L33">        return ALL_INVISIBLE_CHARACTERS_PATTERN.matcher(string).replaceAll(ConstantRegion.NO_CHAR);</span>
+    }
+
+    /**
+     * 计算一个带有两个操作数 一个操作符的计算公式的结果
+     *
+     * @param BinaryFormula 公式 例如 1 + 2
+     * @return 计算结果数值
+     * @deprecated 已不再使用此函数
+     */
+    @Deprecated
+    public double calculation2(String BinaryFormula) {
+<span class="fc" id="L45">        final StringBuilder a = new StringBuilder();</span>
+<span class="fc" id="L46">        final StringBuilder b = new StringBuilder();</span>
+<span class="fc" id="L47">        boolean isOk = false;</span>
+<span class="fc" id="L48">        char Operator = 0;</span>
+<span class="fc bfc" id="L49" title="All 2 branches covered.">        for (char c : BinaryFormula.toCharArray()) {</span>
+<span class="fc bfc" id="L50" title="All 2 branches covered.">            if (!isOk) {</span>
+<span class="fc bfc" id="L51" title="All 2 branches covered.">                if (StrUtils.IsAnOperator(c)) {</span>
+<span class="fc" id="L52">                    Operator = c;</span>
+<span class="fc" id="L53">                    isOk = true;</span>
+                } else {
+<span class="fc" id="L55">                    b.append(c);</span>
+                }
+            } else {
+<span class="fc" id="L58">                a.append(c);</span>
+            }
+        }
+<span class="fc bfc" id="L61" title="All 2 branches covered.">        if (Operator != 0) {</span>
+<span class="fc" id="L62">            return NumberUtils.calculation(Operator, StrUtils.stringToDouble(a.toString()), StrUtils.stringToDouble(b.toString()));</span>
+        } else {
+<span class="fc" id="L64">            throw new AbnormalOperation(&quot;您的公式格式错误，未解析成功，请您检查您的格式哦！\n&quot; +</span>
+                    &quot;The format of your formula is wrong, and it was not parsed successfully. Please check your format!\n&quot; +
+                    &quot;error format =&gt; &quot; + BinaryFormula);
+        }
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

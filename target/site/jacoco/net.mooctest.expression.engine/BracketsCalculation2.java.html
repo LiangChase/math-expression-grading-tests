@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>BracketsCalculation2.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">online-math-expression-grading</a> &gt; <a href="index.source.html" class="el_package">net.mooctest.expression.engine</a> &gt; <span class="el_source">BracketsCalculation2.java</span></div><h1>BracketsCalculation2.java</h1><pre class="source lang-java linenums">package net.mooctest.expression.engine;
+
+/**
+ * 将一个带有嵌套括号的表达式数值结果计算，能够识别嵌套括号的就按优先级，是括号表达式计算的实现类
+ * &lt;p&gt;
+ * Compute the numerical results of an expression with nested parentheses. Those that can recognize nested parentheses are prioritized. They are the implementation classes of the calculation of parenthesis expressions
+ *
+ * @author zhao
+ */
+public class BracketsCalculation2 extends BracketsCalculation implements CompileCalculation {
+
+    /**
+     * 新版括号表达式解析计算时，需要使用的第三方计算组件
+     * &lt;p&gt;
+     * Third party calculation components to be used when parsing and calculating the new bracket expression
+     */
+<span class="fc" id="L17">    protected final static PrefixExpressionOperation PREFIX_EXPRESSION_OPERATION = PrefixExpressionOperation.getInstance(CalculationManagement.PREFIX_EXPRESSION_OPERATION_NAME);</span>
+
+    protected BracketsCalculation2(String name) {
+<span class="fc" id="L20">        super(name);</span>
+<span class="fc" id="L21">    }</span>
+
+    /**
+     * 从管理者中获取到指定名称的计算组件，注意 如果管理者中不存在该名称的组件，那么该组件就会自动的注册
+     * &lt;p&gt;
+     * Get the calculation component with the specified name from the manager. Note that if there is no component with this name in the manager, the component will be registered automatically
+     *
+     * @param CalculationName 组件的名字
+     * @return 解析括号类计算公式的计算组件
+     */
+    public static BracketsCalculation2 getInstance(String CalculationName) {
+<span class="fc bfc" id="L32" title="All 2 branches covered.">        if (CalculationManagement.isRegister(CalculationName)) {</span>
+<span class="fc" id="L33">            final Calculation calculationByName = CalculationManagement.getCalculationByName(CalculationName);</span>
+<span class="fc bfc" id="L34" title="All 2 branches covered.">            if (calculationByName instanceof BracketsCalculation2) {</span>
+<span class="fc" id="L35">                return (BracketsCalculation2) calculationByName;</span>
+            } else {
+<span class="fc" id="L37">                throw new ExtractException(</span>
+                        &quot;您需要的计算组件[&quot; + CalculationName + &quot;]被找到了，但是它似乎不属于 BracketsCalculation2 类型\n请您重新定义一个名称。&quot;
+                );
+            }
+        } else {
+<span class="fc" id="L42">            BracketsCalculation2 BracketsCalculation2 = new BracketsCalculation2(CalculationName);</span>
+<span class="fc" id="L43">            CalculationManagement.register(BracketsCalculation2, false);</span>
+<span class="fc" id="L44">            return BracketsCalculation2;</span>
+        }
+    }
+
+    /**
+     * 解析带有括号的公式，并将每一个括号的计算结果进行汇总，然后将结果对象返回
+     * &lt;p&gt;
+     * Parse the formula with brackets, summarize the calculation results of each bracket, and then return the result object
+     *
+     * @param Formula        带有嵌套括号的公式
+     *                       &lt;p&gt;
+     *                       Formulas with nested parentheses
+     * @param formatRequired 是否需要格式化，在此处进行格式化的设置
+     *                       &lt;p&gt;
+     *                       Whether format is required, set the format here
+     * @return 返回一个结果对象
+     * &lt;p&gt;
+     * Returns a result object
+     */
+    @Override
+    public CalculationNumberResults calculation(String Formula, boolean formatRequired) {
+<span class="fc bfc" id="L65" title="All 2 branches covered.">        if (!Mathematical_Expression.Options.isUseBigDecimal()) {</span>
+<span class="fc" id="L66">            return (CalculationNumberResults) this.compile(Formula, formatRequired).calculationCache(false);</span>
+        }
+<span class="fc" id="L68">        return (CalculationNumberResults) this.compileBigDecimal(Formula, formatRequired).calculationBigDecimalsCache(false);</span>
+    }
+
+    @Override
+    public LogResults explain(String Formula, boolean formatRequired) {
+<span class="fc" id="L73">        return this.explain(Formula, formatRequired, true);</span>
+    }
+
+    LogResults explain(String Formula, boolean formatRequired, boolean isFirst) {
+        // 设置当前公式的名字
+<span class="fc" id="L78">        final String s = &quot;f_&quot; + Formula.hashCode();</span>
+        // 设置前置语句
+<span class="fc" id="L80">        final LogResults logResults = new LogResults(s);</span>
+<span class="fc" id="L81">        logResults.setPrefix(&quot;f_&quot; + Formula.hashCode() + &quot;(\&quot;&quot; + Formula + &quot;\&quot;)&quot;);</span>
+<span class="fc" id="L82">        return this.explain(Formula, formatRequired, logResults, isFirst);</span>
+    }
+
+    LogResults explain(String Formula, boolean formatRequired, LogResults logResults, boolean isFirst) {
+<span class="fc" id="L86">        int length = Formula.length();</span>
+        // 公式存储区
+<span class="fc" id="L88">        final StringBuilder stringBuilder = new StringBuilder(length + 16);</span>
+        // 括号内数据的起始索引
+<span class="fc" id="L90">        int start = 0;</span>
+<span class="fc" id="L91">        boolean setOk = false;</span>
+        // 括号内的括号均衡数量，为了确定是一对括号
+<span class="fc" id="L93">        int count = 0;</span>
+<span class="fc bfc" id="L94" title="All 2 branches covered.">        for (int i = 0; i &lt; length; i++) {</span>
+<span class="fc" id="L95">            char aChar = Formula.charAt(i);</span>
+<span class="fc bfc" id="L96" title="All 2 branches covered.">            if (aChar == ConstantRegion.LEFT_BRACKET) {</span>
+                // 如果当前字符是一个左括号，那么说明括号开始了，这个时候需要将起始点记录
+<span class="pc bpc" id="L98" title="1 of 2 branches missed.">                if (!setOk) {</span>
+<span class="fc" id="L99">                    setOk = true;</span>
+<span class="fc" id="L100">                    start = i + 1;</span>
+                }
+<span class="fc" id="L102">                ++count;</span>
+<span class="pc bpc" id="L103" title="1 of 4 branches missed.">            } else if (aChar == ConstantRegion.RIGHT_BRACKET &amp;&amp; --count == 0) {</span>
+<span class="fc" id="L104">                setOk = false;</span>
+                // 如果当前字符是一个右括号，那么就将括号中的字符进行递归计算，计算之后将该参数作为公式的一部分
+<span class="fc" id="L106">                final LogResults explain = this.explain(Formula.substring(start, i), formatRequired, false);</span>
+<span class="fc" id="L107">                stringBuilder.append(explain.getResult());</span>
+<span class="fc" id="L108">                logResults.put(explain);</span>
+<span class="pc bpc" id="L109" title="1 of 4 branches missed.">            } else if (!setOk &amp;&amp; aChar != ConstantRegion.EMPTY) {</span>
+                // 如果不是一个括号就将字符提供给字符串缓冲区
+<span class="fc" id="L111">                stringBuilder.append(aChar);</span>
+            }
+        }
+        // 将此字符串的结果计算出来
+<span class="fc" id="L115">        final LogResults explain = PREFIX_EXPRESSION_OPERATION.explain(stringBuilder.toString(), formatRequired, isFirst);</span>
+<span class="fc" id="L116">        logResults.put(explain);</span>
+<span class="fc" id="L117">        logResults.setResult(explain.getResult());</span>
+<span class="fc" id="L118">        return logResults;</span>
+    }
+
+
+    /**
+     * 格式化一个公式 使得其可以被该计算组件进行运算，这里是将字符串格式化成为能够被括号解析组件计算的公式
+     * &lt;p&gt;
+     * Format a formula so that it can be calculated by the calculation component. Here is to format the string into a formula that can be calculated by the bracket resolution component
+     *
+     * @param string 数学运算公式
+     * @return 格式化之后的数学运算公式
+     */
+    @Override
+    public String formatStr(String string) {
+<span class="fc" id="L132">        return super.formatStr(string);</span>
+    }
+
+    @Override
+    public PackExpression compile(String Formula, boolean formatRequired) {
+<span class="fc" id="L137">        return BracketsExpression.compile(Formula, formatRequired, this);</span>
+    }
+
+    @Override
+    public PackExpression compileBigDecimal(String Formula, boolean formatRequired) {
+<span class="fc" id="L142">        return BracketsExpression.compileBigDecimal(Formula, formatRequired, this);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

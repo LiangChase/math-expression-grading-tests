@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>NameExpression.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">online-math-expression-grading</a> &gt; <a href="index.source.html" class="el_package">net.mooctest.expression.engine</a> &gt; <span class="el_source">NameExpression.java</span></div><h1>NameExpression.java</h1><pre class="source lang-java linenums">package net.mooctest.expression.engine;
+
+/**
+ * 带有名字的计算表达式对象
+ *
+ * @author zhao
+ */
+public abstract class NameExpression implements Expression {
+
+
+    private final StringBuilder Expression;
+
+    private final String calculationName;
+
+<span class="fc" id="L15">    private boolean available = true;</span>
+
+    private CalculationResults cache;
+
+<span class="fc" id="L19">    public NameExpression(String expression, String calculationName) {</span>
+<span class="fc" id="L20">        this.Expression = new StringBuilder(expression);</span>
+<span class="fc" id="L21">        this.calculationName = calculationName;</span>
+<span class="fc" id="L22">    }</span>
+
+    @Override
+    public String getExpressionStr() {
+<span class="fc" id="L26">        return this.Expression.toString();</span>
+    }
+
+    /**
+     * @return 当前表达式的原始引用，我们允许子类通过引用修改表达式
+     * &lt;p&gt;
+     * The original reference of the current expression, we allow subclasses to modify the expression by reference
+     */
+    protected StringBuilder getExpressionStrBuilder() {
+<span class="nc" id="L35">        return this.Expression;</span>
+    }
+
+
+    @Override
+    public String getCalculationName() {
+<span class="fc" id="L41">        return this.calculationName;</span>
+    }
+
+    @Override
+    public CalculationResults getCache() {
+<span class="fc" id="L46">        return this.cache;</span>
+    }
+
+    @Override
+    public void setCache(CalculationResults calculationResults) {
+<span class="fc" id="L51">        this.cache = calculationResults;</span>
+<span class="fc" id="L52">    }</span>
+
+
+    @Override
+    public boolean isAvailable() {
+<span class="fc" id="L57">        return available;</span>
+    }
+
+    /**
+     * 关闭可用状态！
+     */
+    protected void closeAvailable() {
+<span class="fc" id="L64">        this.available = false;</span>
+<span class="fc" id="L65">    }</span>
+
+    @Override
+    public CalculationResults calculationCache(boolean isCopy) {
+<span class="fc" id="L69">        final CalculationResults calculationResults = Expression.super.calculationCache(isCopy);</span>
+<span class="fc bfc" id="L70" title="All 2 branches covered.">        if (!isCopy) {</span>
+<span class="fc" id="L71">            this.closeAvailable();</span>
+        }
+<span class="fc" id="L73">        return calculationResults;</span>
+    }
+
+    @Override
+    public CalculationResults calculationBigDecimalsCache(boolean isCopy) {
+<span class="fc" id="L78">        final CalculationResults calculationResults = Expression.super.calculationBigDecimalsCache(isCopy);</span>
+<span class="fc bfc" id="L79" title="All 2 branches covered.">        if (!isCopy) {</span>
+<span class="fc" id="L80">            this.closeAvailable();</span>
+        }
+<span class="fc" id="L82">        return calculationResults;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

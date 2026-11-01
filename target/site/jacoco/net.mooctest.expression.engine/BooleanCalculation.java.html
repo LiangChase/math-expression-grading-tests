@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>BooleanCalculation.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">online-math-expression-grading</a> &gt; <a href="index.source.html" class="el_package">net.mooctest.expression.engine</a> &gt; <span class="el_source">BooleanCalculation.java</span></div><h1>BooleanCalculation.java</h1><pre class="source lang-java linenums">package net.mooctest.expression.engine;
+
+/**
+ * 计算一个比较表达式的计算组件的父类，计算结果一般都是包含布尔值结果的对象
+ * &lt;p&gt;
+ * Compute the parent class of the calculation component of a comparison expression. The calculation result is generally an object containing Boolean results
+ *
+ * @author zhao
+ */
+public abstract class BooleanCalculation implements Calculation {
+
+    protected final String Name;
+    /**
+     * 在进行该模块的计算时，需要使用到的第三方计算组件
+     */
+<span class="fc" id="L16">    protected NumberCalculation numberCalculation = BracketsCalculation2.getInstance(CalculationManagement.BRACKETS_CALCULATION_2_NAME);</span>
+
+<span class="fc" id="L18">    protected BooleanCalculation(String name) {</span>
+<span class="fc" id="L19">        Name = name;</span>
+<span class="fc" id="L20">    }</span>
+
+    /**
+     * 为该组件配置数值计算过程中所采用的模块，特别是针对“比较表达式”的运算，需依托于高效的数值计算模块。我们赋予您这一自定义能力，旨在让您能灵活选择或设计数值计算模块，从而大幅提高系统应对多样需求的灵活性。
+     * &lt;p&gt;
+     * Configuring the module utilized by this component during numerical computations, particularly for &quot;expression comparison,&quot; necessitates the integration of a robust numerical calculation module. Our provision of this customization capability aims to enable you to handpick or design your numerical computation modules, thereby significantly enhancing the adaptability and flexibility of the system to diverse requirements.
+     *
+     * @param numberCalculation 数值计算组件，如果您没有调用过此函数，则默认是使用的 BracketsCalculation2
+     *                          &lt;p&gt;
+     *                          Numerical Calculation Component - if you have not invoked this function, the default module in use is BracketsCalculation2.
+     */
+    public void setCalculation(NumberCalculation numberCalculation) {
+<span class="fc" id="L32">        this.numberCalculation = numberCalculation;</span>
+<span class="fc" id="L33">    }</span>
+
+    /**
+     * 为该组件配置数值计算过程中所采用的模块，特别是针对“比较表达式”的运算，需依托于高效的数值计算模块。我们赋予您这一自定义能力，旨在让您能灵活选择或设计数值计算模块，从而大幅提高系统应对多样需求的灵活性。
+     * &lt;p&gt;
+     * Configuring the module utilized by this component during numerical computations, particularly for &quot;expression comparison,&quot; necessitates the integration of a robust numerical calculation module. Our provision of this customization capability aims to enable you to handpick or design your numerical computation modules, thereby significantly enhancing the adaptability and flexibility of the system to diverse requirements.
+     *
+     * @param numberCalculation 数值计算组件，如果您没有调用过此函数，则默认是使用的 BracketsCalculation2
+     *                          &lt;p&gt;
+     *                          Numerical Calculation Component - if you have not invoked this function, the default module in use is BracketsCalculation2.
+     */
+    /**
+     * 格式化一个公式 使得其可以被该计算组件进行运算
+     * &lt;p&gt;
+     * Format a formula so that it can be calculated by the calculation component
+     *
+     * @param string 数学运算公式
+     * @return 格式化之后的数学运算公式
+     */
+    @Override
+    public String formatStr(String string) {
+<span class="fc" id="L54">        return string.replaceAll(&quot;\\s+&quot;, ConstantRegion.NO_CHAR);</span>
+    }
+
+    /**
+     * @return 计算组件的名称
+     */
+    @Override
+    public String getName() {
+<span class="fc" id="L62">        return this.Name;</span>
+    }
+
+    /**
+     * 检查公式格式是否正确，如果不正确就会抛出一个异常
+     * &lt;p&gt;
+     * Check whether the formula format is correct. If not, an exception will be thrown
+     *
+     * @param string 需要被判断格式的数学运算公式
+     *               &lt;p&gt;
+     *               Mathematical operation formula of the format to be judged
+     */
+    @Override
+    public void check(String string) throws WrongFormat {
+        // 先按照表达式的比较运算符进行一个切分
+<span class="fc" id="L77">        final String[] split = ConstantRegion.REGULAR_COMPARISON_OPERATOR_PATTERN.split(string);</span>
+        // 判断是否属于布尔表达式，使用切分之后是否有两个表达式判断
+<span class="fc bfc" id="L79" title="All 2 branches covered.">        if (split.length == 2) {</span>
+            // 检查表达式两边是否符合条件
+<span class="fc" id="L81">            final String left = split[0];</span>
+<span class="fc" id="L82">            final String right = split[1];</span>
+<span class="pc bpc" id="L83" title="1 of 2 branches missed.">            if (!ConstantRegion.STRING_NULL.equals(left)) numberCalculation.check(left);</span>
+<span class="pc bpc" id="L84" title="1 of 2 branches missed.">            if (!ConstantRegion.STRING_NULL.equals(right)) numberCalculation.check(right);</span>
+<span class="fc" id="L85">        } else {</span>
+            // 如果比较运算符两边的表达式不是2个，说明不是一个布尔表达式
+<span class="fc" id="L87">            throw new WrongFormat(&quot;发生了错误，您的布尔表达式中，存在着数量不正确的比较运算符\n&quot; +</span>
+                    &quot;An error has occurred. There is an incorrect number of comparison operators in your Boolean expression\n&quot; +
+                    &quot;Number of comparison operators [&quot; + (split.length - 1) + &quot;]&quot;);
+        }
+<span class="fc" id="L91">    }</span>
+
+    /**
+     * 计算一个数学表达式，并将计算细节与计算结果存储到数值结果集中。
+     * &lt;p&gt;
+     * Compute a mathematical expression and store the calculation details and results in the numerical result set.
+     *
+     * @param Formula        被计算的表达式，要求返回值是一个数值。
+     *                       &lt;p&gt;
+     *                       The returned value of the evaluated expression is required to be a numeric value.
+     * @param formatRequired 是否需要被格式化，用于确保公式格式正确。
+     *                       &lt;p&gt;
+     *                       Whether it needs to be formatted to ensure that the formula format is correct.
+     * @return 数值结果集对象，其中保存着每一步的操作数据，以及最终结果数值
+     * &lt;p&gt;
+     * Numerical result set object, which stores the operation data of each step and the final result value
+     */
+    public abstract CalculationBooleanResults calculation(String Formula, boolean formatRequired);
+
+    /**
+     * 计算一个数学表达式，并将计算细节与计算结果存储到数值结果集中。
+     * &lt;p&gt;
+     * Compute a mathematical expression and store the calculation details and results in the numerical result set.
+     *
+     * @param Formula 被计算的表达式，要求返回值是一个数值。
+     *                &lt;p&gt;
+     *                The returned value of the evaluated expression is required to be a numeric value.
+     * @return 布尔结果对象，其中存储着有关结果以及其计算过程的一些信息
+     * &lt;p&gt;
+     * Boolean result object, which stores some information about the result and its calculation process
+     * @see CalculationBooleanResults
+     */
+    public CalculationBooleanResults calculation(String Formula) {
+<span class="nc" id="L124">        return calculation(Formula, true);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

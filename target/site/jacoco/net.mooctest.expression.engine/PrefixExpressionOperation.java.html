@@ -1,0 +1,267 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PrefixExpressionOperation.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">online-math-expression-grading</a> &gt; <a href="index.source.html" class="el_package">net.mooctest.expression.engine</a> &gt; <span class="el_source">PrefixExpressionOperation.java</span></div><h1>PrefixExpressionOperation.java</h1><pre class="source lang-java linenums">package net.mooctest.expression.engine;
+
+import top.lingyuzhao.varFormatter.utils.DataObj;
+
+import java.util.Stack;
+import java.util.regex.Pattern;
+
+/**
+ * 解析一个无括号的数学计算公式的组件，针对不含括号的计算公式，该组件可以提供计算支持
+ * &lt;p&gt;
+ * Parse a component of mathematical calculation formula without brackets. This component can provide calculation support for calculation formula without brackets
+ *
+ * @author zhao
+ */
+public final class PrefixExpressionOperation extends NumberCalculation implements CompileCalculation {
+
+    /**
+     * 正负号，用于将所有的 +- 替换成为 -
+     */
+<span class="fc" id="L20">    private final static Pattern SIGN_PATTERN = Pattern.compile(ConstantRegion.REGULAR_ADDITION_SUBTRACTION_AMBIGUITY);</span>
+
+    private PrefixExpressionOperation(String name) {
+<span class="fc" id="L23">        super(name);</span>
+<span class="fc" id="L24">    }</span>
+
+    /**
+     * 从管理者中获取到指定名称的计算组件，注意 如果管理者中不存在该名称的组件，那么该组件就会自动的注册
+     *
+     * @param CalculationName 组件的名字
+     * @return 解析括号类计算公式的计算组件
+     */
+    public static PrefixExpressionOperation getInstance(String CalculationName) {
+<span class="fc bfc" id="L33" title="All 2 branches covered.">        if (CalculationManagement.isRegister(CalculationName)) {</span>
+<span class="fc" id="L34">            final Calculation calculationByName = CalculationManagement.getCalculationByName(CalculationName);</span>
+<span class="fc bfc" id="L35" title="All 2 branches covered.">            if (calculationByName instanceof PrefixExpressionOperation) {</span>
+<span class="fc" id="L36">                return (PrefixExpressionOperation) calculationByName;</span>
+            } else {
+<span class="fc" id="L38">                throw new ExtractException(</span>
+                        &quot;您需要的计算组件[&quot; + CalculationName + &quot;]被找到了，但是它似乎不属于 PrefixExpressionOperation 类型，请您重新定义一个名称。\n&quot; +
+                                &quot;The calculation component [&quot; + CalculationName + &quot;] you need has been found, but it does not seem to belong to the PrefixExpressionOperation type. Please redefine a name.&quot;
+                );
+            }
+        } else {
+<span class="fc" id="L44">            PrefixExpressionOperation PrefixExpressionOperation = new PrefixExpressionOperation(CalculationName);</span>
+<span class="fc" id="L45">            CalculationManagement.register(PrefixExpressionOperation, false);</span>
+<span class="fc" id="L46">            return PrefixExpressionOperation;</span>
+        }
+    }
+
+    /**
+     * 检查公式格式是否正确，如果不正确就会抛出一个异常
+     * &lt;p&gt;
+     * Check whether the formula format is correct. If not, an exception will be thrown
+     *
+     * @param string 需要被判断格式的数学运算公式
+     *               &lt;p&gt;
+     *               Mathematical operation formula of the format to be judged
+     */
+    @Override
+    public void check(String string) throws WrongFormat {
+<span class="fc" id="L61">        int last = string.length() - 1;</span>
+<span class="fc" id="L62">        char lastChar = string.charAt(last);</span>
+<span class="fc bfc" id="L63" title="All 2 branches covered.">        while (lastChar == ConstantRegion.EMPTY) {</span>
+<span class="fc" id="L64">            lastChar = string.charAt(--last);</span>
+        }
+<span class="fc bfc" id="L66" title="All 2 branches covered.">        if (StrUtils.IsANumber(lastChar)) {</span>
+<span class="fc" id="L67">            boolean is = false;</span>
+<span class="fc bfc" id="L68" title="All 2 branches covered.">            for (int i = 0; i &lt; last; i++) {</span>
+<span class="fc" id="L69">                char c = string.charAt(i);</span>
+<span class="pc bpc" id="L70" title="1 of 4 branches missed.">                if (c == ConstantRegion.LEFT_BRACKET || c == ConstantRegion.RIGHT_BRACKET) {</span>
+<span class="fc" id="L71">                    throw new WrongFormat(&quot;组件&quot; + this.Name + &quot;只能解析无括号的数学表达式，请将表达式中的括号去除。\nThe component &quot; + this.Name + &quot; can only resolve mathematical expressions without parentheses. Please remove the parentheses from the expressions.&quot;);</span>
+                }
+<span class="pc bpc" id="L73" title="1 of 6 branches missed.">                if (!StrUtils.IsANumber(c) &amp;&amp; c != ConstantRegion.DECIMAL_POINT &amp;&amp; c != ConstantRegion.EMPTY) {</span>
+<span class="fc bfc" id="L74" title="All 2 branches covered.">                    if (!StrUtils.IsAnOperator(c)) {</span>
+<span class="fc" id="L75">                        throw new WrongFormat(&quot;解析表达式的时候出现了未知符号!!!\nUnknown symbol appears when parsing expression!!!\nWrong format =&gt; [&quot; + c + &quot;] from &quot; + string);</span>
+                    } else {
+<span class="fc bfc" id="L77" title="All 4 branches covered.">                        if (c != ConstantRegion.MINUS_SIGN &amp;&amp; is)</span>
+<span class="fc" id="L78">                            throw new WrongFormat(&quot;您的数学表达式不正确，缺失了一个运算数值或多出了一个运算符。ERROR =&gt; &quot; + string);</span>
+<span class="fc" id="L79">                        is = true;</span>
+<span class="fc" id="L80">                        continue;</span>
+                    }
+                }
+<span class="fc" id="L83">                is = false;</span>
+            }
+<span class="fc" id="L85">        } else {</span>
+<span class="fc" id="L86">            throw new WrongFormat(&quot;数学表达式的最后一个字符应是一个数值。\nThe last character of a mathematical expression should be a numeric value.\nERROR =&gt; &quot; + lastChar);</span>
+        }
+<span class="fc" id="L88">    }</span>
+
+    /**
+     * 格式化一个公式 使得其可以被该计算组件进行运算
+     *
+     * @param string 数学运算公式
+     * @return 格式化之后的数学运算公式
+     */
+    @Override
+    public String formatStr(String string) {
+<span class="fc" id="L98">        return SIGN_PATTERN.matcher(string).replaceAll(ConstantRegion.MINUS_SIGN_STR) + ConstantRegion.PLUS_SIGN + '0';</span>
+    }
+
+    @Override
+    public PrefixExpression compile(String Formula, boolean formatRequired) {
+        final String newFormula;
+<span class="fc bfc" id="L104" title="All 2 branches covered.">        if (formatRequired) {</span>
+<span class="fc" id="L105">            newFormula = formatStr(Formula);</span>
+        } else {
+<span class="fc" id="L107">            newFormula = Formula;</span>
+        }
+<span class="fc" id="L109">        return PrefixExpression.compile(newFormula, this.Name);</span>
+    }
+
+    @Override
+    public PrefixExpression compileBigDecimal(String Formula, boolean formatRequired) {
+        final String newFormula;
+<span class="fc bfc" id="L115" title="All 2 branches covered.">        if (formatRequired) {</span>
+<span class="fc" id="L116">            newFormula = formatStr(Formula);</span>
+        } else {
+<span class="fc" id="L118">            newFormula = Formula;</span>
+        }
+<span class="fc" id="L120">        return PrefixExpression.compileBigDecimal(newFormula, this.Name);</span>
+    }
+
+    /**
+     * 计算一个数学表达式，并将计算细节与计算结果存储到数值结果集中。
+     * &lt;p&gt;
+     * Compute a mathematical expression and store the calculation details and results in the numerical result set.
+     *
+     * @param Formula        被计算的表达式，要求返回值是一个数值。
+     *                       &lt;p&gt;
+     *                       The returned value of the evaluated expression is required to be a numeric value.
+     * @param formatRequired 是否需要被格式化，用于确保公式格式正确。
+     *                       &lt;p&gt;
+     *                       Whether it needs to be formatted to ensure that the formula format is correct.
+     * @return 数值结果集对象，其中保存着每一步的操作数据，以及最终结果数值
+     * &lt;p&gt;
+     * Numerical result set object, which stores the operation data of each step and the final result value
+     */
+    @Override
+    public CalculationNumberResults calculation(String Formula, boolean formatRequired) {
+<span class="fc bfc" id="L140" title="All 2 branches covered.">        if (!Mathematical_Expression.Options.isUseBigDecimal()) {</span>
+<span class="fc" id="L141">            return this.calculationBigDecimal(Formula, formatRequired);</span>
+        }
+<span class="fc" id="L143">        return this.compile(Formula, formatRequired).calculationCache(false);</span>
+    }
+
+    /**
+     * 计算一个数学表达式，并将计算细节与计算结果存储到数值结果集中。
+     * &lt;p&gt;
+     * Compute a mathematical expression and store the calculation details and results in the numerical result set.
+     *
+     * @param newFormula     被计算的表达式，要求返回值是一个数值。
+     *                       &lt;p&gt;
+     *                       The returned value of the evaluated expression is required to be a numeric value.
+     * @param formatRequired 是否需要被格式化，用于确保公式格式正确。
+     *                       &lt;p&gt;
+     *                       Whether it needs to be formatted to ensure that the formula format is correct.
+     * @return 数值结果集对象，其中保存着每一步的操作数据，以及最终结果数值
+     * &lt;p&gt;
+     * Numerical result set object, which stores the operation data of each step and the final result value
+     */
+    private CalculationNumberResults calculationBigDecimal(final String newFormula, boolean formatRequired) {
+<span class="fc" id="L162">        return this.compileBigDecimal(newFormula, formatRequired).calculationBigDecimalsCache(false);</span>
+    }
+
+    @Override
+    public LogResults explain(String Formula, boolean formatRequired) {
+<span class="fc" id="L167">        return this.explain(Formula, formatRequired, true);</span>
+    }
+
+    LogResults explain(String Formula, boolean formatRequired, boolean addResult) {
+        final String newFormula;
+<span class="fc bfc" id="L172" title="All 2 branches covered.">        if (formatRequired) {</span>
+<span class="fc" id="L173">            newFormula = formatStr(Formula);</span>
+        } else {
+<span class="fc" id="L175">            newFormula = Formula;</span>
+        }
+        // 设置当前公式的名字
+<span class="fc" id="L178">        final String s1 = &quot;f_&quot; + Formula.hashCode();</span>
+        // 创建操作符栈
+<span class="fc" id="L180">        final Stack&lt;Double&gt; doubleStack = new Stack&lt;&gt;();</span>
+        // 创建操作数栈
+<span class="fc" id="L182">        final Stack&lt;Character&gt; characterStack = new Stack&lt;&gt;();</span>
+        // 开始格式化，将符号与操作数进行分类
+<span class="fc" id="L184">        int length = newFormula.length();</span>
+<span class="fc" id="L185">        final StringBuilder stringBuilder = new StringBuilder(length);</span>
+        // 准备日志记录
+<span class="fc" id="L187">        LogResults logResults = new LogResults(s1);</span>
+        // 将当前公式的变量 做为前置语句
+<span class="fc" id="L189">        logResults.setPrefix(s1 + &quot;(\&quot;&quot; + newFormula + &quot;\&quot;)&quot;);</span>
+        // 准备一个指针 指向日志记录的不同层级 在这里首先是日志的根节点
+<span class="fc" id="L191">        DataObj dataObj = new DataObj(s1 + &quot;_优先&quot;);</span>
+<span class="fc" id="L192">        logResults.put(dataObj);</span>
+        // 创建标记点 标记上一个是否是操作符
+<span class="fc" id="L194">        boolean backIsOpt = true;</span>
+<span class="fc bfc" id="L195" title="All 2 branches covered.">        for (int i = 0; i &lt; length; i++) {</span>
+<span class="fc" id="L196">            char c = newFormula.charAt(i);</span>
+<span class="fc bfc" id="L197" title="All 4 branches covered.">            if (!backIsOpt &amp;&amp; StrUtils.IsAnOperator(c)) {</span>
+<span class="fc" id="L198">                backIsOpt = true;</span>
+                // 如果上一个不是操作符，且当前是操作符，就先将上一个数值计算出来
+<span class="fc" id="L200">                double number = StrUtils.stringToDouble(stringBuilder.toString());</span>
+<span class="fc bfc" id="L201" title="All 2 branches covered.">                if (characterStack.isEmpty()) {</span>
+                    // 如果栈为空 直接将运算符添加到栈顶
+<span class="fc" id="L203">                    characterStack.push(c);</span>
+                    // 将数值添加到数值栈顶
+<span class="fc" id="L205">                    doubleStack.push(number);</span>
+                } else {
+                    // 如果不为空就检查栈顶的与当前运算符的优先级
+<span class="fc bfc" id="L208" title="All 2 branches covered.">                    if (!NumberUtils.PriorityComparison(characterStack.peek(), c)) {</span>
+                        // 如果上一个优先级较大 就将上一个操作符取出
+<span class="fc" id="L210">                        char top = characterStack.pop();</span>
+                        // 将上一个优先级高的值 与当下优先级较低的值进行运算，然后将当下的新数值和当下的操作符推到栈顶
+<span class="fc" id="L212">                        final Double pop = doubleStack.pop();</span>
+<span class="fc" id="L213">                        final double calculation = NumberUtils.calculation(top, pop, number);</span>
+<span class="fc" id="L214">                        doubleStack.push(calculation);</span>
+<span class="fc" id="L215">                        characterStack.push(c);</span>
+                        // 在这里进行标记，这里就是优先级较高的
+<span class="fc" id="L217">                        final String s = pop + &quot; &quot; + top + &quot; &quot; + number;</span>
+<span class="fc" id="L218">                        final String s2 = &quot;f_&quot; + s.hashCode();</span>
+<span class="fc" id="L219">                        final DataObj dataObj1 = new DataObj(s2 + &quot;_计算&quot;);</span>
+<span class="fc" id="L220">                        dataObj1.setPrefix(s2 + &quot;(\&quot;&quot; + s + &quot;\&quot;)&quot;);</span>
+<span class="fc" id="L221">                        dataObj1.put(s2, calculation);</span>
+<span class="fc" id="L222">                        dataObj.put(dataObj1);</span>
+                        // 更新层级
+<span class="fc" id="L224">                        dataObj = dataObj1;</span>
+<span class="fc" id="L225">                    } else {</span>
+                        // 反之就将当前运算符提供到栈顶
+<span class="fc" id="L227">                        characterStack.push(c);</span>
+<span class="fc" id="L228">                        doubleStack.push(number);</span>
+                    }
+                }
+                // 清理所有的字符缓冲
+<span class="fc" id="L232">                stringBuilder.delete(0, stringBuilder.length());</span>
+<span class="fc" id="L233">                continue;</span>
+            }
+<span class="fc" id="L235">            PrefixExpression.isBackIsOpt(stringBuilder, c);</span>
+<span class="fc" id="L236">            backIsOpt = false;</span>
+        }
+<span class="fc" id="L238">        doubleStack.push(StrUtils.stringToDouble(stringBuilder.toString()));</span>
+<span class="fc" id="L239">        double res = doubleStack.firstElement();</span>
+        // 开始计算
+<span class="fc" id="L241">        final DataObj dataObj2 = new DataObj(s1 + &quot;_最终&quot;);</span>
+<span class="fc" id="L242">        dataObj.put(dataObj2);</span>
+<span class="fc" id="L243">        dataObj = dataObj2;</span>
+        // 开始计算
+<span class="fc" id="L245">        int index = 0;</span>
+<span class="fc bfc" id="L246" title="All 2 branches covered.">        for (Character c : characterStack) {</span>
+            // 获取操作数并计算结果
+<span class="fc" id="L248">            final Double v = doubleStack.get(++index);</span>
+<span class="fc" id="L249">            final String s2 = res + &quot; &quot; + c + &quot; &quot; + v;</span>
+<span class="fc" id="L250">            final String s3 = &quot;f_&quot; + s2.hashCode();</span>
+<span class="fc" id="L251">            final DataObj dataObj1 = new DataObj(s3 + &quot;_计算&quot;);</span>
+<span class="fc" id="L252">            dataObj1.setPrefix(s3 + &quot;(\&quot;&quot; + s2 + &quot;\&quot;)&quot;);</span>
+<span class="fc" id="L253">            dataObj.put(dataObj1);</span>
+<span class="fc" id="L254">            res = NumberUtils.calculation(c, res, v);</span>
+<span class="fc" id="L255">            dataObj1.put(s3, res);</span>
+<span class="fc" id="L256">            dataObj = dataObj1;</span>
+<span class="fc" id="L257">        }</span>
+<span class="fc bfc" id="L258" title="All 2 branches covered.">        if (addResult) {</span>
+<span class="fc" id="L259">            dataObj.put(&quot;result&quot;, res);</span>
+        }
+<span class="fc" id="L261">        logResults.setResult(res);</span>
+<span class="fc" id="L262">        logResults.setNameJoin(false);</span>
+        // 返回结果
+<span class="fc" id="L264">        return logResults;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ExpressionExamSubmission.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">online-math-expression-grading</a> &gt; <a href="index.source.html" class="el_package">net.mooctest.grading.expression</a> &gt; <span class="el_source">ExpressionExamSubmission.java</span></div><h1>ExpressionExamSubmission.java</h1><pre class="source lang-java linenums">package net.mooctest.grading.expression;
+
+import net.mooctest.grading.domain.AnswerResult;
+import net.mooctest.grading.domain.ExamSubmission;
+
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.List;
+import java.util.Map;
+
+public record ExpressionExamSubmission(
+        String examId,
+        String studentId,
+        List&lt;ExpressionAnswerSubmission&gt; answers,
+        Instant startedAt,
+        Instant submittedAt,
+        Instant deadline,
+        int allowedDurationSeconds,
+        int attemptNumber,
+        boolean identityVerified,
+        boolean termsAccepted,
+        boolean suspendedAccount,
+        boolean proctorDisconnected,
+        boolean ipAddressChanged,
+        int fullscreenExitCount,
+        int copyPasteEventCount,
+        BigDecimal bonusPoints,
+        Integer instructorOverridePercent,
+        Map&lt;String, Integer&gt; sectionPassPercentages
+) {
+<span class="fc" id="L31">    public ExpressionExamSubmission {</span>
+<span class="pc bpc" id="L32" title="1 of 2 branches missed.">        answers = answers == null ? List.of() : List.copyOf(answers);</span>
+<span class="pc bpc" id="L33" title="1 of 2 branches missed.">        sectionPassPercentages = sectionPassPercentages == null</span>
+<span class="nc" id="L34">                ? Map.of()</span>
+<span class="fc" id="L35">                : Map.copyOf(sectionPassPercentages);</span>
+<span class="fc" id="L36">    }</span>
+
+    public ExamSubmission toExamSubmission(List&lt;AnswerResult&gt; evaluatedAnswers) {
+<span class="fc" id="L39">        return new ExamSubmission(</span>
+                examId,
+                studentId,
+                evaluatedAnswers,
+                startedAt,
+                submittedAt,
+                deadline,
+                allowedDurationSeconds,
+                attemptNumber,
+                identityVerified,
+                termsAccepted,
+                suspendedAccount,
+                proctorDisconnected,
+                ipAddressChanged,
+                fullscreenExitCount,
+                copyPasteEventCount,
+                bonusPoints,
+                instructorOverridePercent,
+                sectionPassPercentages
+        );
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

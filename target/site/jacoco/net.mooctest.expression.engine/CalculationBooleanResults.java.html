@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>CalculationBooleanResults.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">online-math-expression-grading</a> &gt; <a href="index.source.html" class="el_package">net.mooctest.expression.engine</a> &gt; <span class="el_source">CalculationBooleanResults.java</span></div><h1>CalculationBooleanResults.java</h1><pre class="source lang-java linenums">package net.mooctest.expression.engine;
+
+import java.util.Comparator;
+
+/**
+ * 数值计算结果存储对象，在该类中存储的都是来自计算组件的计算结果，以及运算级别层数等信息
+ * &lt;p&gt;
+ * Numerical calculation result storage object. In this class, the calculation results from calculation components, as well as the number of operation levels and other information are stored
+ *
+ * @author zhao
+ */
+public class CalculationBooleanResults implements CalculationResults, Comparator&lt;CalculationBooleanResults&gt;, Comparable&lt;CalculationBooleanResults&gt; {
+
+<span class="fc" id="L14">    private static final long serialVersionUID = &quot;CalculationBooleanResults&quot;.hashCode();</span>
+
+    private final boolean result;
+    private final int Layers;
+    private final double left;
+    private final double right;
+    private String source;
+
+    /**
+     * @param result 已经计算出结果数值的情况下，使用该形参进行赋值
+     * @param source 来源，表明该结果对象的计算来源。
+     * @param layers 计算层次
+     * @param left   计算出来的表达式左值，在进行比较的时候，往往是两个表达式之间进行比较，在这里就可以获取比较运算符左边的数值
+     *               &lt;p&gt;
+     *               The calculated left value of the expression is often compared between two expressions when comparing. Here you can get the value on the left of the comparison operator
+     * @param right  计算出来的表达式右值，在进行比较的时候，往往是两个表达式之间进行比较，在这里就可以获取比较运算符右边的数值
+     *               &lt;p&gt;
+     *               The right value of the calculated expression is often compared between two expressions during comparison. Here you can get the value on the right of the comparison operator
+     */
+<span class="fc" id="L33">    public CalculationBooleanResults(boolean result, String source, int layers, double left, double right) {</span>
+<span class="fc" id="L34">        this.result = result;</span>
+<span class="fc" id="L35">        this.source = source;</span>
+<span class="fc" id="L36">        Layers = layers;</span>
+<span class="fc" id="L37">        this.left = left;</span>
+<span class="fc" id="L38">        this.right = right;</span>
+<span class="fc" id="L39">    }</span>
+
+    @Override
+    public int getResultLayers() {
+<span class="fc" id="L43">        return this.Layers;</span>
+    }
+
+    @Override
+    public String getCalculationSourceName() {
+<span class="nc" id="L48">        return this.source;</span>
+    }
+
+    public Boolean getResult() {
+<span class="fc" id="L52">        return this.result;</span>
+    }
+
+    @Override
+    public void setSource(String source) {
+<span class="nc" id="L57">        this.source = source;</span>
+<span class="nc" id="L58">    }</span>
+
+    public double getLeft() {
+<span class="fc" id="L61">        return left;</span>
+    }
+
+    public double getRight() {
+<span class="fc" id="L65">        return right;</span>
+    }
+
+    @Override
+    public int compareTo(CalculationBooleanResults o) {
+<span class="fc bfc" id="L70" title="All 2 branches covered.">        if (o == null) return 1;</span>
+        else {
+<span class="fc bfc" id="L72" title="All 2 branches covered.">            if (this.result ^ o.result) {</span>
+<span class="fc bfc" id="L73" title="All 2 branches covered.">                if (this.result) return 1;</span>
+<span class="fc" id="L74">                else return -1;</span>
+<span class="fc" id="L75">            } else return 0;</span>
+        }
+    }
+
+    @Override
+    public int compare(CalculationBooleanResults o1, CalculationBooleanResults o2) {
+<span class="nc" id="L81">        return o1.compareTo(o2);</span>
+    }
+
+    @Override
+    public String toString() {
+<span class="fc" id="L86">        return &quot;CalculationBooleanResults{&quot; +</span>
+                &quot;result=&quot; + result +
+                &quot;, source='&quot; + source + '\'' +
+                &quot;, Layers=&quot; + Layers +
+                &quot;, left=&quot; + left +
+                &quot;, right=&quot; + right +
+                '}';
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

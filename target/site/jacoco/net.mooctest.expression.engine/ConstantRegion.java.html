@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ConstantRegion.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">online-math-expression-grading</a> &gt; <a href="index.source.html" class="el_package">net.mooctest.expression.engine</a> &gt; <span class="el_source">ConstantRegion.java</span></div><h1>ConstantRegion.java</h1><pre class="source lang-java linenums">package net.mooctest.expression.engine;
+
+import java.util.HashMap;
+import java.util.regex.Pattern;
+
+/**
+ * 静态资源池，其中的所有数值都是一个静态资源，被整个框架多次复用，也可以在此处进行框架的参数定制
+ * &lt;p&gt;
+ * Static resource pool, in which all values are a static resource and reused by the whole framework for many times. You can also customize the parameters of the framework here
+ *
+ * @author zhao
+ */
+<span class="nc" id="L13">public final class ConstantRegion {</span>
+    public final static float VERSION = 1.57F;
+    public final static String STRING_NULL = &quot;null&quot;;
+    public final static char LEFT_BRACKET = '(';
+    public final static char RIGHT_BRACKET = ')';
+    public final static char DECIMAL_POINT = '.';
+    public final static char EMPTY = ' ';
+    public final static String NO_CHAR = &quot;&quot;;
+    public final static byte BA_ASCII = 0b1000001;
+    public final static byte BZ_ASCII = 0b1011010;
+    public final static byte SA_ASCII = 0b1100001;
+    public final static byte SZ_ASCII = 0b1111010;
+    public final static char PLUS_SIGN = '+';
+    public final static char MINUS_SIGN = '-';
+    public final static char MULTIPLICATION_SIGN = '*';
+    public final static char DIVISION_SIGN = '/';
+    public final static char REMAINDER_SIGN = '%';
+    public final static char FACTORIAL_SIGN = '!';
+    public final static char POW_SIGN = '^';
+    public final static char COMMA = ',';
+    public final static String GREATER_THAN_SIGN = &quot;&gt;&quot;;
+    public final static String LESS_THAN_SIGN = &quot;&lt;&quot;;
+    public final static String EQUAL_SIGN1 = &quot;=&quot;;
+    public final static String EQUAL_SIGN2 = EQUAL_SIGN1 + EQUAL_SIGN1;
+    public final static String NEGATE_SIGN = &quot;!&quot;;
+<span class="fc" id="L38">    public final static String MINUS_SIGN_STR = String.valueOf(ConstantRegion.MINUS_SIGN);</span>
+    public final static String NOT_EQUAL_SIGN1 = NEGATE_SIGN + EQUAL_SIGN1;
+    public final static String NOT_EQUAL_SIGN2 = LESS_THAN_SIGN + GREATER_THAN_SIGN;
+    public final static String GREATER_THAN_OR_EQUAL_TO_SIGN = GREATER_THAN_SIGN + EQUAL_SIGN1;
+    public final static String LESS_THAN_OR_EQUAL_TO_SIGN = LESS_THAN_SIGN + EQUAL_SIGN1;
+    public final static String REGULAR_COMPARISON_OPERATOR = LESS_THAN_OR_EQUAL_TO_SIGN + &quot;|&quot; +
+            GREATER_THAN_OR_EQUAL_TO_SIGN + &quot;|&quot; + NOT_EQUAL_SIGN1 + &quot;|&quot; + NOT_EQUAL_SIGN2 + &quot;|&quot; + EQUAL_SIGN2 +
+            &quot;|[&quot; + LESS_THAN_SIGN + EQUAL_SIGN1 + GREATER_THAN_SIGN + &quot;]&quot;;
+<span class="fc" id="L46">    public final static Pattern REGULAR_COMPARISON_OPERATOR_PATTERN = Pattern.compile(REGULAR_COMPARISON_OPERATOR);</span>
+    public final static String REGULAR_PURE_LETTER = &quot;[a-zA-Z]+&quot;;
+    public final static String REGULAR_ADDITION_SUBTRACTION_AMBIGUITY = &quot;\\&quot; + PLUS_SIGN + MINUS_SIGN;
+    /**
+     * 符号 到 符号名称 的映射字典 用于进行替换操作 不需要替换的在这里将不会包含~
+     */
+<span class="fc" id="L52">    public final static HashMap&lt;Character, String&gt; SIGN_NAME = new HashMap&lt;&gt;();</span>
+
+    static {
+        // SIGN_NAME.put(PLUS_SIGN, &quot;PLUS_SIGN&quot;);
+        // SIGN_NAME.put(MINUS_SIGN, &quot;MINUS_SIGN&quot;);
+        // SIGN_NAME.put(MULTIPLICATION_SIGN, &quot;MULTIPLICATION_SIGN&quot;);
+        // SIGN_NAME.put(DIVISION_SIGN, &quot;DIVISION_SIGN&quot;);
+        // SIGN_NAME.put(REMAINDER_SIGN, &quot;REMAINDER_SIGN&quot;);
+<span class="fc" id="L60">        SIGN_NAME.put(POW_SIGN, &quot;pow&quot;);</span>
+//         SIGN_NAME.put(FACTORIAL_SIGN, &quot;FACTORIAL_SIGN&quot;);
+<span class="fc" id="L62">        SIGN_NAME.put(EMPTY, &quot;&quot;);</span>
+<span class="fc" id="L63">        SIGN_NAME.put(LEFT_BRACKET, &quot;_LB&quot;);</span>
+<span class="fc" id="L64">        SIGN_NAME.put(RIGHT_BRACKET, &quot;RB_&quot;);</span>
+<span class="fc" id="L65">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

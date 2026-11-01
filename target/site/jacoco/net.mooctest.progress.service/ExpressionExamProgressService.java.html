@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ExpressionExamProgressService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">online-math-expression-grading</a> &gt; <a href="index.source.html" class="el_package">net.mooctest.progress.service</a> &gt; <span class="el_source">ExpressionExamProgressService.java</span></div><h1>ExpressionExamProgressService.java</h1><pre class="source lang-java linenums">package net.mooctest.progress.service;
+
+import net.mooctest.grading.expression.ExpressionExamGrade;
+import net.mooctest.grading.domain.GradeReport;
+import net.mooctest.progress.domain.CourseProgressSnapshot;
+import net.mooctest.progress.domain.LessonProgress;
+import net.mooctest.progress.domain.LessonType;
+import net.mooctest.progress.domain.ProgressEvaluation;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+
+/** Applies a finalized expression exam grade to its quiz lesson. */
+public final class ExpressionExamProgressService {
+    private final LearningProgressService progressService;
+
+<span class="fc" id="L18">    public ExpressionExamProgressService(LearningProgressService progressService) {</span>
+<span class="fc" id="L19">        this.progressService = Objects.requireNonNull(progressService, &quot;progressService must not be null&quot;);</span>
+<span class="fc" id="L20">    }</span>
+
+    public ProgressEvaluation evaluate(CourseProgressSnapshot snapshot, String quizLessonId, ExpressionExamGrade grade) {
+<span class="fc" id="L23">        Objects.requireNonNull(snapshot, &quot;snapshot must not be null&quot;);</span>
+<span class="fc" id="L24">        Objects.requireNonNull(grade, &quot;grade must not be null&quot;);</span>
+<span class="fc bfc" id="L25" title="All 4 branches covered.">        if (quizLessonId == null || quizLessonId.isBlank()) {</span>
+<span class="fc" id="L26">            throw new IllegalArgumentException(&quot;quizLessonId must not be blank&quot;);</span>
+        }
+<span class="fc" id="L28">        GradeReport report = grade.report();</span>
+<span class="fc bfc" id="L29" title="All 2 branches covered.">        if (report.manualReview()) {</span>
+<span class="fc" id="L30">            throw new IllegalArgumentException(&quot;exam grade is pending manual review&quot;);</span>
+        }
+
+<span class="fc" id="L33">        List&lt;LessonProgress&gt; updated = new ArrayList&lt;&gt;(snapshot.lessons().size());</span>
+<span class="fc" id="L34">        boolean found = false;</span>
+<span class="fc bfc" id="L35" title="All 2 branches covered.">        for (LessonProgress lesson : snapshot.lessons()) {</span>
+<span class="fc bfc" id="L36" title="All 2 branches covered.">            if (!quizLessonId.equals(lesson.lessonId())) {</span>
+<span class="fc" id="L37">                updated.add(lesson);</span>
+<span class="fc" id="L38">                continue;</span>
+            }
+<span class="fc bfc" id="L40" title="All 2 branches covered.">            if (found) {</span>
+<span class="fc" id="L41">                throw new IllegalArgumentException(&quot;quizLessonId is duplicated: &quot; + quizLessonId);</span>
+            }
+<span class="fc bfc" id="L43" title="All 2 branches covered.">            if (lesson.type() != LessonType.QUIZ) {</span>
+<span class="fc" id="L44">                throw new IllegalArgumentException(&quot;lesson is not a quiz: &quot; + quizLessonId);</span>
+            }
+<span class="fc" id="L46">            found = true;</span>
+<span class="fc" id="L47">            int percentage = Math.max(0, Math.min(100, report.percentage()));</span>
+<span class="fc" id="L48">            updated.add(new LessonProgress(</span>
+<span class="fc" id="L49">                    lesson.lessonId(), lesson.type(), lesson.mandatory(), lesson.order(),</span>
+<span class="fc" id="L50">                    100, percentage, lesson.attempts() + 1, lesson.maximumAttempts(),</span>
+<span class="fc bfc" id="L51" title="All 2 branches covered.">                    true, lesson.approved(), lesson.plagiarismFlag()</span>
+<span class="fc bfc" id="L52" title="All 2 branches covered.">                            || report.failures().stream().anyMatch(failure -&gt; failure.contains(&quot;INTEGRITY&quot;)),</span>
+<span class="fc" id="L53">                    lesson.attendedMinutes(), lesson.requiredMinutes(), lesson.unlocked()</span>
+            ));
+<span class="fc" id="L55">        }</span>
+<span class="fc bfc" id="L56" title="All 2 branches covered.">        if (!found) {</span>
+<span class="fc" id="L57">            throw new IllegalArgumentException(&quot;quiz lesson not found: &quot; + quizLessonId);</span>
+        }
+
+<span class="fc" id="L60">        CourseProgressSnapshot updatedSnapshot = new CourseProgressSnapshot(</span>
+<span class="fc" id="L61">                snapshot.studentId(), snapshot.courseId(), updated, snapshot.sequentialLearning(),</span>
+<span class="fc" id="L62">                snapshot.requiredOverallPercent(), snapshot.requiredQuizScore(), snapshot.identityVerified(),</span>
+<span class="fc" id="L63">                snapshot.codeOfConductAccepted(), snapshot.subscriptionActive(), snapshot.accountSuspended(),</span>
+<span class="fc" id="L64">                snapshot.coursePublished(), snapshot.enrolledAt(), snapshot.accessExpiresAt(),</span>
+<span class="fc" id="L65">                snapshot.certificateEnabled(), snapshot.certificateName(), snapshot.finalProjectRequired(),</span>
+<span class="fc" id="L66">                snapshot.outstandingBalance(), snapshot.instructorApprovalRequired()</span>
+        );
+<span class="fc" id="L68">        return progressService.evaluate(updatedSnapshot);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

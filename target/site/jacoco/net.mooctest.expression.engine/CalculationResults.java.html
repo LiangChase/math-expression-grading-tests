@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>CalculationResults.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">online-math-expression-grading</a> &gt; <a href="index.source.html" class="el_package">net.mooctest.expression.engine</a> &gt; <span class="el_source">CalculationResults.java</span></div><h1>CalculationResults.java</h1><pre class="source lang-java linenums">package net.mooctest.expression.engine;
+
+import top.lingyuzhao.varFormatter.core.VarFormatter;
+
+import java.io.Serializable;
+import java.math.BigDecimal;
+
+/**
+ * 计算结果接口，其中一般用来存储有关计算结果的数据，结果数据不一定是一个数值，具体的操作请查阅子类实现
+ * &lt;p&gt;
+ * Calculation result interface, which is generally used to store data related to calculation results. The result data may not be a numerical value. Please refer to the subclass implementation for specific operations
+ *
+ * @author zhao
+ */
+public interface CalculationResults extends Serializable {
+    /**
+     * 计算结果中是经历了很多层计算才获得到的，这个函数可以获取到计算结果的层数量，也可以说是计算结果的计算次数。
+     * &lt;p&gt;
+     * The calculation result is obtained after many layers of calculation. This function can obtain the number of layers of the calculation result, or the number of calculations of the calculation result.
+     *
+     * @return 计算结果的计算次数
+     */
+    int getResultLayers();
+
+    /**
+     * 结果是被计算组件计算出来的，在这里可以查询到计算该结果的组件名称，需要注意的是，这里返回的名称不会随着管理者中注册表的更改而变化
+     * &lt;p&gt;
+     * The result is calculated by the calculation component. You can query the name of the component that calculates the result here. Note that the name returned here will not change with the change of the registry in the administrator
+     *
+     * @return 计算结果的来源
+     */
+    String getCalculationSourceName();
+
+    /**
+     * 获取计算结果，计算结果的类型在不同的子类中是不同的，所以这里返回的是Object类型
+     * &lt;p&gt;
+     * Obtain the calculation result. The type of the calculation result varies among different subclasses, so the object type is returned here
+     *
+     * @return 计算结果
+     * &lt;p&gt;
+     * Calculation results
+     */
+    Object getResult();
+
+
+    /**
+     * 重新设置此计算结果的名称
+     *
+     * @param source 来源，表明该结果对象的计算来源。
+     */
+    void setSource(String source);
+
+    /**
+     * 获取计算结果，计算结果的类型在不同的子类中是不同的，所以这里返回的是Object类型
+     * &lt;p&gt;
+     * Obtain the calculation result. The type of the calculation result varies among different subclasses, so the object type is returned here
+     *
+     * @return 计算结果
+     * &lt;p&gt;
+     * Calculation results
+     */
+    default BigDecimal getBigDecimalResult() {
+<span class="nc" id="L63">        throw new UnsupportedOperationException(&quot;This function is not supported getBigDecimalResult!!!&quot;);</span>
+    }
+
+    /**
+     * @param varFormatter 当您需要将计算出来的 日志流程图 的字符串获取到的时候，您可以使用此函数来进行格式化操作，您可以在这里指定您的格式化规则。
+     *                     &lt;p&gt;
+     *                     When you need to obtain the string of the calculated log flowchart, you can use this function to perform formatting operations, where you can specify your formatting rules.
+     * @return 获取到当前计算结果对应的 流程图的代码，此函数不一定可以被成功调用，您需要确保您的结果类型中支持流程图代码的生成
+     * &lt;p&gt;
+     * Obtain the code for the flowchart corresponding to the current calculation result. This function may not be called successfully. You need to ensure that your result type supports the generation of flowchart code
+     */
+    default String explain(VarFormatter varFormatter) {
+<span class="nc" id="L75">        throw new UnsupportedOperationException(&quot;There is no execution process record in this type!&quot;);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

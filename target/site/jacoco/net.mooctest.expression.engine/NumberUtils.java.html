@@ -1,0 +1,191 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>NumberUtils.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">online-math-expression-grading</a> &gt; <a href="index.source.html" class="el_package">net.mooctest.expression.engine</a> &gt; <span class="el_source">NumberUtils.java</span></div><h1>NumberUtils.java</h1><pre class="source lang-java linenums">package net.mooctest.expression.engine;
+
+/**
+ * 数值工具类
+ */
+<span class="nc" id="L6">public final class NumberUtils {</span>
+
+    /**
+     * 将一个数值的 1/10 倍计算出来
+     *
+     * @param number 需要被计算的数值
+     * @return 数值的 1/10倍
+     * @deprecated 项目中未使用过的函数，未来可能会移除
+     */
+    @Deprecated
+    public static int divideByTen(int number) {
+<span class="fc" id="L17">        return (number &gt;&gt; 1) / 5;</span>
+    }
+
+    /**
+     * 计算一个数值的阶乘
+     *
+     * @param number 运算数值
+     * @return 计算出来的结果
+     */
+    public static double factorial(double number) {
+<span class="fc bfc" id="L27" title="All 2 branches covered.">        return number &lt;= 1 ? number : number * factorial(number - 1);</span>
+    }
+
+    /**
+     * 计算一个数值的结果
+     *
+     * @param CalculationType 计算类型
+     * @param an              运算数值1
+     * @param bn              运算数值2
+     * @return 运算结果
+     */
+    public static double calculation(char CalculationType, double an, double bn) {
+<span class="fc bfc" id="L39" title="All 7 branches covered.">        switch (CalculationType) {</span>
+            case ConstantRegion.PLUS_SIGN:
+<span class="fc" id="L41">                return an + bn;</span>
+            case ConstantRegion.MINUS_SIGN:
+<span class="fc" id="L43">                return an - bn;</span>
+            case ConstantRegion.MULTIPLICATION_SIGN:
+<span class="fc" id="L45">                return an * bn;</span>
+            case ConstantRegion.DIVISION_SIGN:
+<span class="fc" id="L47">                return an / bn;</span>
+            case ConstantRegion.REMAINDER_SIGN:
+<span class="fc" id="L49">                return an % bn;</span>
+            case ConstantRegion.POW_SIGN:
+<span class="fc" id="L51">                return Math.pow(an, bn);</span>
+            default:
+<span class="fc" id="L53">                throw new AbnormalOperation(&quot;操作数计算异常，您的计算模式不存在，错误的计算模式 = [&quot; + CalculationType + &quot;]\n&quot; +</span>
+                        &quot;Operand calculation exception. Your calculation mode does not exist. Wrong calculation mode = [&quot; + CalculationType + &quot;]&quot;);
+        }
+    }
+
+    /**
+     * 将两个操作符级别进行比较
+     *
+     * @param s1 操作符1
+     * @param s2 操作符2
+     * @return s1操作符的优先级 是否小于 s2操作符的优先级
+     */
+    public static boolean PriorityComparison(char s1, char s2) {
+<span class="fc bfc" id="L66" title="All 2 branches covered.">        switch (s1) {</span>
+            case ConstantRegion.PLUS_SIGN:
+            case ConstantRegion.MINUS_SIGN:
+<span class="fc bfc" id="L69" title="All 2 branches covered.">                switch (s2) {</span>
+                    case ConstantRegion.MULTIPLICATION_SIGN:
+                    case ConstantRegion.DIVISION_SIGN:
+                    case ConstantRegion.REMAINDER_SIGN:
+                    case ConstantRegion.POW_SIGN:
+<span class="fc" id="L74">                        return true;</span>
+                }
+                break;
+        }
+<span class="fc" id="L78">        return false;</span>
+    }
+
+    /**
+     * 将两个数值进行比较
+     *
+     * @param ComparisonOperator 两个数值的比较运算符
+     * @param left               左值
+     * @param right              右值
+     * @return 左值 与 右值 之间是否符合比较运算符的关系
+     * &lt;p&gt;
+     * Whether the left value and right value conform to the comparison operator
+     */
+    public static boolean ComparisonOperation(String ComparisonOperator, double left, double right) {
+<span class="fc bfc" id="L92" title="All 7 branches covered.">        switch (ComparisonOperator) {</span>
+            case ConstantRegion.LESS_THAN_SIGN:
+<span class="fc bfc" id="L94" title="All 2 branches covered.">                return left &lt; right;</span>
+            case ConstantRegion.GREATER_THAN_SIGN:
+<span class="pc bpc" id="L96" title="1 of 2 branches missed.">                return left &gt; right;</span>
+            case ConstantRegion.LESS_THAN_OR_EQUAL_TO_SIGN:
+<span class="fc bfc" id="L98" title="All 2 branches covered.">                return left &lt;= right;</span>
+            case ConstantRegion.GREATER_THAN_OR_EQUAL_TO_SIGN:
+<span class="fc bfc" id="L100" title="All 2 branches covered.">                return left &gt;= right;</span>
+            case ConstantRegion.EQUAL_SIGN1:
+            case ConstantRegion.EQUAL_SIGN2:
+<span class="fc bfc" id="L103" title="All 2 branches covered.">                return left == right;</span>
+            case ConstantRegion.NOT_EQUAL_SIGN1:
+            case ConstantRegion.NOT_EQUAL_SIGN2:
+<span class="fc bfc" id="L106" title="All 2 branches covered.">                return left != right;</span>
+            default:
+<span class="fc" id="L108">                throw new AbnormalOperation(&quot;无法进行比较运算，因为有错误的运算符。\n&quot; +</span>
+                        &quot;The comparison operation cannot be performed because there is an incorrect operator.\n&quot; +
+                        &quot;Bad comparison operator =&gt; &quot; + ComparisonOperator);
+        }
+    }
+
+    /**
+     * 将区间内的所有数值进行累加
+     *
+     * @param start 区间起始数值
+     * @param end   区间终止数值
+     * @return 区间内所有数值的累加结果
+     */
+    public static String sumOfRangeString(double start, double end) {
+<span class="fc bfc" id="L122" title="All 2 branches covered.">        if (start == end) {</span>
+<span class="fc" id="L123">            return String.valueOf(start);</span>
+        }
+        // （首 + 尾）* 项数 / 2
+<span class="fc" id="L126">        return &quot;(&quot; + start + '+' + end + ')' + '*' + (Math.abs(end - start) + 1) + '/' + 2;</span>
+    }
+
+    /**
+     * 带有步长的方式计算一个区间内所有数值的累加
+     *
+     * @param start 区间起始数值
+     * @param end   区间终止数值
+     * @param step  区间内每一个元素之间的步长
+     * @return 区间内元素之和
+     */
+    public static String sumOfRangeString(double start, double end, double step) {
+<span class="fc bfc" id="L138" title="All 2 branches covered.">        if (step == 1) return sumOfRangeString(start, end);</span>
+<span class="fc bfc" id="L139" title="All 2 branches covered.">        if (start == end) {</span>
+<span class="fc" id="L140">            return String.valueOf(start);</span>
+        }
+<span class="fc" id="L142">        double abs = Math.abs(end - start);</span>
+<span class="fc" id="L143">        end -= abs % step;</span>
+<span class="fc" id="L144">        abs = Math.abs(end - start);</span>
+<span class="fc" id="L145">        double n = 1 + (abs / step);</span>
+        // na1 + n(n-1) * d / 2
+<span class="fc" id="L147">        return n + &quot;*&quot; + start + &quot;+&quot; + n + &quot;*(&quot; + n + &quot;-1)*&quot; + Math.max(step, 2) + &quot;/2&quot;;</span>
+    }
+
+    /**
+     * 带有步长的方式计算一个区间内所有数值的累乘
+     *
+     * @param start 区间的起始数值
+     * @param end   区间的终止数值
+     * @param step  区间内每一个元素之间的等差
+     * @return 区间内所有元素的累乘结果
+     */
+    public static double MultiplyOfRange(double start, double end, double step) {
+<span class="fc bfc" id="L159" title="All 2 branches covered.">        if (start == end) {</span>
+<span class="fc" id="L160">            return start;</span>
+        }
+<span class="fc" id="L162">        double res = 1;</span>
+<span class="fc" id="L163">        end = end - (end - start) % step;</span>
+<span class="fc bfc" id="L164" title="All 2 branches covered.">        while (start &lt;= end) {</span>
+<span class="fc" id="L165">            res *= start;</span>
+<span class="fc" id="L166">            start += step;</span>
+        }
+<span class="fc" id="L168">        return res;</span>
+    }
+
+    /**
+     * 带有步长的方式计算一个区间内所有数值的累乘
+     *
+     * @param start 区间的起始数值
+     * @param end   区间的终止数值
+     * @param step  区间内每一个元素之间的等差
+     * @return 区间内所有元素的累乘结果
+     */
+    public static String MultiplyOfRangeString(double start, double end, double step) {
+<span class="fc bfc" id="L180" title="All 2 branches covered.">        if (start == end) {</span>
+<span class="fc" id="L181">            return String.valueOf(start);</span>
+        }
+<span class="fc" id="L183">        double res = 1;</span>
+<span class="fc bfc" id="L184" title="All 2 branches covered.">        while (start &lt;= end) {</span>
+<span class="fc" id="L185">            res *= start;</span>
+<span class="fc" id="L186">            start += step;</span>
+        }
+<span class="fc" id="L188">        return String.valueOf(res);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

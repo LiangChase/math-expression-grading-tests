@@ -1,0 +1,605 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ExamGradingService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">online-math-expression-grading</a> &gt; <a href="index.source.html" class="el_package">net.mooctest.grading.service</a> &gt; <span class="el_source">ExamGradingService.java</span></div><h1>ExamGradingService.java</h1><pre class="source lang-java linenums">package net.mooctest.grading.service;
+
+import net.mooctest.grading.domain.AnswerResult;
+import net.mooctest.grading.domain.ExamSubmission;
+import net.mooctest.grading.domain.GradeReport;
+import net.mooctest.grading.domain.GradingPolicy;
+import net.mooctest.grading.domain.QuestionType;
+import org.springframework.stereotype.Service;
+
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+
+@Service
+<span class="fc" id="L22">public class ExamGradingService {</span>
+
+<span class="fc" id="L24">    private static final BigDecimal ZERO = new BigDecimal(&quot;0.00&quot;);</span>
+
+    public GradeReport grade(ExamSubmission submission, GradingPolicy policy) {
+<span class="fc" id="L27">        validate(submission, policy);</span>
+<span class="fc" id="L28">        List&lt;String&gt; failures = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L29">        List&lt;String&gt; warnings = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L30">        Map&lt;String, BigDecimal&gt; sectionEarned = new HashMap&lt;&gt;();</span>
+<span class="fc" id="L31">        Map&lt;String, BigDecimal&gt; sectionMaximum = new HashMap&lt;&gt;();</span>
+<span class="fc" id="L32">        BigDecimal rawPoints = ZERO;</span>
+<span class="fc" id="L33">        BigDecimal maximumPoints = ZERO;</span>
+<span class="fc" id="L34">        boolean manualReview = false;</span>
+
+<span class="fc bfc" id="L36" title="All 2 branches covered.">        for (AnswerResult answer : submission.answers()) {</span>
+<span class="fc" id="L37">            BigDecimal awarded = scoreAnswer(answer, policy, warnings);</span>
+<span class="fc" id="L38">            rawPoints = rawPoints.add(awarded);</span>
+<span class="fc" id="L39">            maximumPoints = maximumPoints.add(answer.maximumPoints());</span>
+<span class="fc" id="L40">            sectionEarned.merge(answer.section(), awarded, BigDecimal::add);</span>
+<span class="fc" id="L41">            sectionMaximum.merge(answer.section(), answer.maximumPoints(), BigDecimal::add);</span>
+
+<span class="fc bfc" id="L43" title="All 4 branches covered.">            if (answer.mandatory() &amp;&amp; !answer.answered()) {</span>
+<span class="fc" id="L44">                failures.add(&quot;MANDATORY_QUESTION_UNANSWERED:&quot; + answer.questionId());</span>
+            }
+<span class="fc bfc" id="L46" title="All 4 branches covered.">            if (answer.mandatory() &amp;&amp; awarded.signum() &lt;= 0) {</span>
+<span class="fc" id="L47">                warnings.add(&quot;MANDATORY_QUESTION_NO_CREDIT:&quot; + answer.questionId());</span>
+            }
+<span class="fc bfc" id="L49" title="All 2 branches covered.">            if (answer.plagiarismFlag()) {</span>
+<span class="fc" id="L50">                manualReview = true;</span>
+<span class="fc" id="L51">                failures.add(&quot;ANSWER_INTEGRITY_VIOLATION:&quot; + answer.questionId());</span>
+            }
+<span class="fc bfc" id="L53" title="All 2 branches covered.">            if (answer.manualReviewRequired()) {</span>
+<span class="fc" id="L54">                manualReview = true;</span>
+<span class="fc" id="L55">                warnings.add(&quot;MANUAL_GRADING_REQUIRED:&quot; + answer.questionId());</span>
+            }
+<span class="fc bfc" id="L57" title="All 2 branches covered.">            if (answer.timedOut()) {</span>
+<span class="fc" id="L58">                warnings.add(&quot;QUESTION_TIMED_OUT:&quot; + answer.questionId());</span>
+            }
+<span class="fc" id="L60">        }</span>
+
+<span class="fc" id="L62">        rawPoints = money(rawPoints.max(BigDecimal.ZERO));</span>
+<span class="fc" id="L63">        maximumPoints = money(maximumPoints);</span>
+<span class="fc" id="L64">        BigDecimal adjusted = applySubmissionRules(</span>
+                rawPoints,
+                maximumPoints,
+                submission,
+                policy,
+                failures,
+                warnings
+        );
+<span class="fc" id="L72">        Map&lt;String, Integer&gt; sectionPercentages = calculateSections(</span>
+                sectionEarned,
+                sectionMaximum,
+                submission,
+                policy,
+                failures
+        );
+
+<span class="fc bfc" id="L80" title="All 2 branches covered.">        int percentage = maximumPoints.signum() == 0</span>
+<span class="fc" id="L81">                ? 0</span>
+<span class="fc" id="L82">                : adjusted.multiply(BigDecimal.valueOf(100))</span>
+<span class="fc" id="L83">                .divide(maximumPoints, 0, RoundingMode.HALF_UP)</span>
+<span class="fc" id="L84">                .intValue();</span>
+<span class="fc bfc" id="L85" title="All 2 branches covered.">        if (policy.capScoreAtOneHundred()) {</span>
+<span class="fc" id="L86">            percentage = Math.min(100, percentage);</span>
+<span class="fc" id="L87">            adjusted = adjusted.min(maximumPoints);</span>
+        }
+<span class="fc" id="L89">        percentage = Math.max(0, percentage);</span>
+<span class="fc" id="L90">        adjusted = money(adjusted.max(BigDecimal.ZERO));</span>
+
+<span class="fc" id="L92">        evaluateSubmissionIntegrity(submission, policy, failures, warnings);</span>
+<span class="fc bfc" id="L93" title="All 2 branches covered.">        if (submission.proctorDisconnected()</span>
+<span class="fc bfc" id="L94" title="All 2 branches covered.">                || submission.fullscreenExitCount() &gt;= 3</span>
+<span class="fc bfc" id="L95" title="All 2 branches covered.">                || submission.copyPasteEventCount() &gt;= 5) {</span>
+<span class="fc" id="L96">            manualReview = true;</span>
+        }
+<span class="fc bfc" id="L98" title="All 2 branches covered.">        if (submission.instructorOverridePercent() != null) {</span>
+<span class="fc" id="L99">            percentage = submission.instructorOverridePercent();</span>
+<span class="fc" id="L100">            adjusted = money(maximumPoints.multiply(BigDecimal.valueOf(percentage).movePointLeft(2)));</span>
+<span class="fc" id="L101">            warnings.add(&quot;INSTRUCTOR_OVERRIDE_APPLIED&quot;);</span>
+        }
+
+<span class="fc bfc" id="L104" title="All 2 branches covered.">        boolean passed = percentage &gt;= policy.passPercentage()</span>
+<span class="fc bfc" id="L105" title="All 2 branches covered.">                &amp;&amp; sectionRequirementsMet(sectionPercentages, submission, policy)</span>
+<span class="fc bfc" id="L106" title="All 2 branches covered.">                &amp;&amp; mandatoryRequirementsMet(submission, policy)</span>
+<span class="fc bfc" id="L107" title="All 4 branches covered.">                &amp;&amp; (!policy.failOnIntegrityViolation() || !hasIntegrityFailure(failures));</span>
+<span class="fc bfc" id="L108" title="All 4 branches covered.">        if (!passed &amp;&amp; percentage &lt; policy.passPercentage()) {</span>
+<span class="fc" id="L109">            failures.add(&quot;OVERALL_SCORE_BELOW_PASS_MARK&quot;);</span>
+        }
+<span class="fc bfc" id="L111" title="All 2 branches covered.">        if (manualReview) {</span>
+<span class="fc" id="L112">            warnings.add(&quot;RESULT_PENDING_MANUAL_REVIEW&quot;);</span>
+        }
+
+<span class="fc" id="L115">        return new GradeReport(</span>
+                rawPoints,
+                adjusted,
+                maximumPoints,
+                percentage,
+<span class="fc" id="L120">                letterGrade(percentage, passed),</span>
+                passed,
+                manualReview,
+                sectionPercentages,
+                failures,
+                warnings
+        );
+    }
+
+    private BigDecimal scoreAnswer(
+            AnswerResult answer,
+            GradingPolicy policy,
+            List&lt;String&gt; warnings
+    ) {
+<span class="fc" id="L134">        BigDecimal maximum = answer.maximumPoints();</span>
+<span class="fc bfc" id="L135" title="All 2 branches covered.">        if (!answer.answered()) {</span>
+<span class="fc bfc" id="L136" title="All 2 branches covered.">            if (policy.unansweredPenaltyRate().signum() &gt; 0) {</span>
+<span class="fc" id="L137">                warnings.add(&quot;UNANSWERED_PENALTY:&quot; + answer.questionId());</span>
+<span class="fc" id="L138">                return maximum.multiply(policy.unansweredPenaltyRate()).negate();</span>
+            }
+<span class="fc" id="L140">            return ZERO;</span>
+        }
+
+<span class="fc bfc" id="L143" title="All 6 branches covered.">        BigDecimal score = switch (answer.type()) {</span>
+<span class="fc" id="L144">            case SINGLE_CHOICE, TRUE_FALSE -&gt; scoreBinary(answer, maximum, policy);</span>
+<span class="fc" id="L145">            case MULTIPLE_CHOICE -&gt; scoreMultipleChoice(answer, maximum, policy, warnings);</span>
+<span class="fc" id="L146">            case FILL_BLANK -&gt; scoreFillBlank(answer, maximum, policy);</span>
+<span class="fc" id="L147">            case NUMERIC -&gt; scoreNumeric(answer, maximum, policy, warnings);</span>
+<span class="fc" id="L148">            case ESSAY -&gt; scoreEssay(answer, maximum, warnings);</span>
+<span class="fc" id="L149">            case PROGRAMMING -&gt; scoreProgramming(answer, maximum, policy, warnings);</span>
+        };
+<span class="fc bfc" id="L151" title="All 4 branches covered.">        if (answer.timedOut() &amp;&amp; score.signum() &gt; 0) {</span>
+<span class="fc" id="L152">            score = score.multiply(new BigDecimal(&quot;0.80&quot;));</span>
+        }
+<span class="pc bpc" id="L154" title="1 of 2 branches missed.">        if (score.compareTo(maximum) &gt; 0) {</span>
+<span class="nc" id="L155">            score = maximum;</span>
+        }
+<span class="fc bfc" id="L157" title="All 4 branches covered.">        if (!policy.negativeMarkingEnabled() &amp;&amp; score.signum() &lt; 0) {</span>
+<span class="fc" id="L158">            score = ZERO;</span>
+        }
+<span class="fc" id="L160">        return money(score);</span>
+    }
+
+    private BigDecimal scoreBinary(
+            AnswerResult answer,
+            BigDecimal maximum,
+            GradingPolicy policy
+    ) {
+<span class="fc bfc" id="L168" title="All 2 branches covered.">        if (answer.exactMatch()) {</span>
+<span class="fc" id="L169">            return maximum;</span>
+        }
+<span class="fc bfc" id="L171" title="All 2 branches covered.">        if (policy.negativeMarkingEnabled()) {</span>
+<span class="fc" id="L172">            return maximum.multiply(policy.wrongAnswerPenaltyRate()).negate();</span>
+        }
+<span class="fc" id="L174">        return ZERO;</span>
+    }
+
+    private BigDecimal scoreMultipleChoice(
+            AnswerResult answer,
+            BigDecimal maximum,
+            GradingPolicy policy,
+            List&lt;String&gt; warnings
+    ) {
+<span class="fc bfc" id="L183" title="All 2 branches covered.">        if (answer.exactMatch()) {</span>
+<span class="fc" id="L184">            return maximum;</span>
+        }
+<span class="fc bfc" id="L186" title="All 2 branches covered.">        if (answer.correctOptionCount() == 0) {</span>
+<span class="fc" id="L187">            warnings.add(&quot;MULTIPLE_CHOICE_HAS_NO_CORRECT_OPTIONS:&quot; + answer.questionId());</span>
+<span class="fc" id="L188">            return ZERO;</span>
+        }
+<span class="fc bfc" id="L190" title="All 2 branches covered.">        if (!policy.partialCreditEnabled()) {</span>
+<span class="pc bpc" id="L191" title="1 of 4 branches missed.">            return policy.negativeMarkingEnabled() &amp;&amp; answer.selectedIncorrectOptions() &gt; 0</span>
+<span class="fc" id="L192">                    ? maximum.multiply(policy.wrongAnswerPenaltyRate()).negate()</span>
+<span class="fc" id="L193">                    : ZERO;</span>
+        }
+<span class="fc" id="L195">        BigDecimal earnedRate = BigDecimal.valueOf(answer.selectedCorrectOptions())</span>
+<span class="fc" id="L196">                .divide(BigDecimal.valueOf(answer.correctOptionCount()), 6, RoundingMode.HALF_UP);</span>
+<span class="fc" id="L197">        BigDecimal incorrectRate = BigDecimal.valueOf(answer.selectedIncorrectOptions())</span>
+<span class="fc" id="L198">                .divide(BigDecimal.valueOf(Math.max(1, answer.correctOptionCount())), 6, RoundingMode.HALF_UP);</span>
+<span class="fc" id="L199">        BigDecimal score = maximum.multiply(earnedRate.min(BigDecimal.ONE));</span>
+<span class="fc bfc" id="L200" title="All 2 branches covered.">        if (answer.selectedIncorrectOptions() &gt; 0) {</span>
+<span class="fc bfc" id="L201" title="All 2 branches covered.">            BigDecimal deductionRate = policy.negativeMarkingEnabled()</span>
+<span class="fc" id="L202">                    ? incorrectRate.multiply(policy.wrongAnswerPenaltyRate())</span>
+<span class="fc" id="L203">                    : incorrectRate.multiply(new BigDecimal(&quot;0.25&quot;));</span>
+<span class="fc" id="L204">            score = score.subtract(maximum.multiply(deductionRate));</span>
+        }
+<span class="pc bpc" id="L206" title="1 of 4 branches missed.">        if (answer.selectedCorrectOptions() == 0 &amp;&amp; answer.selectedIncorrectOptions() &gt; 0) {</span>
+<span class="fc" id="L207">            warnings.add(&quot;ONLY_INCORRECT_OPTIONS_SELECTED:&quot; + answer.questionId());</span>
+        }
+<span class="fc" id="L209">        return score;</span>
+    }
+
+    private BigDecimal scoreFillBlank(
+            AnswerResult answer,
+            BigDecimal maximum,
+            GradingPolicy policy
+    ) {
+<span class="fc bfc" id="L217" title="All 2 branches covered.">        if (answer.exactMatch()) {</span>
+<span class="fc" id="L218">            return maximum;</span>
+        }
+<span class="pc bpc" id="L220" title="1 of 4 branches missed.">        if (policy.partialCreditEnabled() &amp;&amp; answer.rubricPercent() &gt; 0) {</span>
+<span class="fc" id="L221">            return maximum.multiply(BigDecimal.valueOf(answer.rubricPercent()).movePointLeft(2));</span>
+        }
+<span class="fc bfc" id="L223" title="All 2 branches covered.">        if (policy.negativeMarkingEnabled()) {</span>
+<span class="fc" id="L224">            return maximum.multiply(policy.wrongAnswerPenaltyRate()).negate();</span>
+        }
+<span class="fc" id="L226">        return ZERO;</span>
+    }
+
+    private BigDecimal scoreNumeric(
+            AnswerResult answer,
+            BigDecimal maximum,
+            GradingPolicy policy,
+            List&lt;String&gt; warnings
+    ) {
+<span class="fc bfc" id="L235" title="All 2 branches covered.">        if (answer.exactMatch()) {</span>
+<span class="fc" id="L236">            return maximum;</span>
+        }
+<span class="fc bfc" id="L238" title="All 4 branches covered.">        if (answer.numericError() == null || answer.numericTolerance() == null) {</span>
+<span class="fc" id="L239">            warnings.add(&quot;NUMERIC_TOLERANCE_DATA_MISSING:&quot; + answer.questionId());</span>
+<span class="fc" id="L240">            return ZERO;</span>
+        }
+<span class="fc bfc" id="L242" title="All 2 branches covered.">        if (answer.numericError().abs().compareTo(answer.numericTolerance()) &lt;= 0) {</span>
+<span class="fc" id="L243">            return maximum;</span>
+        }
+<span class="fc bfc" id="L245" title="All 2 branches covered.">        if (policy.partialCreditEnabled()</span>
+<span class="fc bfc" id="L246" title="All 2 branches covered.">                &amp;&amp; answer.numericTolerance().signum() &gt; 0</span>
+<span class="fc bfc" id="L247" title="All 2 branches covered.">                &amp;&amp; answer.numericError().abs().compareTo(answer.numericTolerance().multiply(BigDecimal.TEN)) &lt;= 0) {</span>
+<span class="fc" id="L248">            BigDecimal ratio = answer.numericError().abs()</span>
+<span class="fc" id="L249">                    .divide(answer.numericTolerance(), 6, RoundingMode.HALF_UP);</span>
+<span class="fc" id="L250">            BigDecimal credit = BigDecimal.ONE.subtract(ratio.subtract(BigDecimal.ONE)</span>
+<span class="fc" id="L251">                    .divide(BigDecimal.valueOf(9), 6, RoundingMode.HALF_UP));</span>
+<span class="fc" id="L252">            return maximum.multiply(credit.max(BigDecimal.ZERO));</span>
+        }
+<span class="fc bfc" id="L254" title="All 2 branches covered.">        return policy.negativeMarkingEnabled()</span>
+<span class="fc" id="L255">                ? maximum.multiply(policy.wrongAnswerPenaltyRate()).negate()</span>
+<span class="fc" id="L256">                : ZERO;</span>
+    }
+
+    private BigDecimal scoreEssay(
+            AnswerResult answer,
+            BigDecimal maximum,
+            List&lt;String&gt; warnings
+    ) {
+<span class="fc bfc" id="L264" title="All 2 branches covered.">        if (answer.manualReviewRequired()) {</span>
+<span class="fc" id="L265">            warnings.add(&quot;ESSAY_SCORE_IS_PROVISIONAL:&quot; + answer.questionId());</span>
+        }
+<span class="fc bfc" id="L267" title="All 4 branches covered.">        if (answer.rubricPercent() == 0 &amp;&amp; !answer.exactMatch()) {</span>
+<span class="fc" id="L268">            return ZERO;</span>
+        }
+<span class="fc bfc" id="L270" title="All 2 branches covered.">        int percent = answer.exactMatch() ? 100 : answer.rubricPercent();</span>
+<span class="fc" id="L271">        return maximum.multiply(BigDecimal.valueOf(percent).movePointLeft(2));</span>
+    }
+
+    private BigDecimal scoreProgramming(
+            AnswerResult answer,
+            BigDecimal maximum,
+            GradingPolicy policy,
+            List&lt;String&gt; warnings
+    ) {
+<span class="fc bfc" id="L280" title="All 2 branches covered.">        if (!answer.compilationSucceeded()) {</span>
+<span class="fc" id="L281">            warnings.add(&quot;PROGRAM_DID_NOT_COMPILE:&quot; + answer.questionId());</span>
+<span class="fc bfc" id="L282" title="All 2 branches covered.">            return policy.programmingCompilationRequired()</span>
+<span class="fc" id="L283">                    ? ZERO</span>
+<span class="fc" id="L284">                    : maximum.multiply(new BigDecimal(&quot;0.10&quot;));</span>
+        }
+<span class="fc bfc" id="L286" title="All 2 branches covered.">        if (answer.totalTests() == 0) {</span>
+<span class="fc" id="L287">            warnings.add(&quot;PROGRAM_HAS_NO_AUTOMATED_TESTS:&quot; + answer.questionId());</span>
+<span class="pc bpc" id="L288" title="1 of 2 branches missed.">            return answer.manualReviewRequired() ? ZERO : maximum.multiply(new BigDecimal(&quot;0.20&quot;));</span>
+        }
+<span class="fc bfc" id="L290" title="All 2 branches covered.">        if (answer.passedTests() == answer.totalTests()) {</span>
+<span class="fc" id="L291">            return maximum;</span>
+        }
+<span class="fc bfc" id="L293" title="All 2 branches covered.">        if (!policy.partialCreditEnabled()) {</span>
+<span class="fc" id="L294">            return ZERO;</span>
+        }
+<span class="fc" id="L296">        BigDecimal passRate = BigDecimal.valueOf(answer.passedTests())</span>
+<span class="fc" id="L297">                .divide(BigDecimal.valueOf(answer.totalTests()), 6, RoundingMode.HALF_UP);</span>
+<span class="fc" id="L298">        BigDecimal score = maximum.multiply(passRate);</span>
+<span class="fc bfc" id="L299" title="All 2 branches covered.">        if (answer.timedOut()) {</span>
+<span class="fc" id="L300">            score = score.multiply(new BigDecimal(&quot;0.75&quot;));</span>
+        }
+<span class="fc bfc" id="L302" title="All 2 branches covered.">        if (answer.plagiarismFlag()) {</span>
+<span class="fc" id="L303">            score = ZERO;</span>
+        }
+<span class="fc" id="L305">        return score;</span>
+    }
+
+    private BigDecimal applySubmissionRules(
+            BigDecimal rawPoints,
+            BigDecimal maximumPoints,
+            ExamSubmission submission,
+            GradingPolicy policy,
+            List&lt;String&gt; failures,
+            List&lt;String&gt; warnings
+    ) {
+<span class="fc" id="L316">        BigDecimal adjusted = rawPoints;</span>
+<span class="fc bfc" id="L317" title="All 2 branches covered.">        if (submission.bonusPoints().signum() &gt; 0) {</span>
+<span class="fc" id="L318">            adjusted = adjusted.add(submission.bonusPoints());</span>
+<span class="fc" id="L319">            warnings.add(&quot;BONUS_POINTS_APPLIED&quot;);</span>
+        }
+<span class="fc bfc" id="L321" title="All 4 branches covered.">        if (submission.deadline() != null &amp;&amp; submission.submittedAt().isAfter(submission.deadline())) {</span>
+<span class="fc" id="L322">            long lateMinutes = Duration.between(submission.deadline(), submission.submittedAt()).toMinutes();</span>
+<span class="fc" id="L323">            long chargedHours = Math.max(1, (lateMinutes + 59) / 60);</span>
+<span class="fc" id="L324">            long penaltyPercent = Math.min(</span>
+<span class="fc" id="L325">                    policy.maximumLatePenaltyPercent(),</span>
+<span class="fc" id="L326">                    chargedHours * policy.latePenaltyPercentPerHour()</span>
+            );
+<span class="fc" id="L328">            adjusted = adjusted.subtract(maximumPoints</span>
+<span class="fc" id="L329">                    .multiply(BigDecimal.valueOf(penaltyPercent).movePointLeft(2)));</span>
+<span class="fc" id="L330">            warnings.add(&quot;LATE_SUBMISSION_PENALTY:&quot; + penaltyPercent);</span>
+<span class="fc bfc" id="L331" title="All 2 branches covered.">            if (penaltyPercent &gt;= 100) {</span>
+<span class="fc" id="L332">                failures.add(&quot;SUBMISSION_TOO_LATE&quot;);</span>
+            }
+        }
+<span class="fc" id="L335">        long duration = Duration.between(submission.startedAt(), submission.submittedAt()).toSeconds();</span>
+<span class="fc bfc" id="L336" title="All 4 branches covered.">        if (submission.allowedDurationSeconds() &gt; 0 &amp;&amp; duration &gt; submission.allowedDurationSeconds()) {</span>
+<span class="fc" id="L337">            long overtime = duration - submission.allowedDurationSeconds();</span>
+<span class="fc bfc" id="L338" title="All 2 branches covered.">            if (overtime &lt;= 60) {</span>
+<span class="fc" id="L339">                warnings.add(&quot;EXAM_GRACE_PERIOD_USED&quot;);</span>
+<span class="fc bfc" id="L340" title="All 2 branches covered.">            } else if (overtime &lt;= 300) {</span>
+<span class="fc" id="L341">                adjusted = adjusted.multiply(new BigDecimal(&quot;0.95&quot;));</span>
+<span class="fc" id="L342">                warnings.add(&quot;EXAM_DURATION_MINOR_OVERRUN&quot;);</span>
+            } else {
+<span class="fc" id="L344">                adjusted = adjusted.multiply(new BigDecimal(&quot;0.80&quot;));</span>
+<span class="fc" id="L345">                failures.add(&quot;EXAM_DURATION_EXCEEDED&quot;);</span>
+            }
+        }
+<span class="fc bfc" id="L348" title="All 2 branches covered.">        if (submission.attemptNumber() &gt; policy.maximumAttempts()) {</span>
+<span class="fc" id="L349">            failures.add(&quot;MAXIMUM_ATTEMPTS_EXCEEDED&quot;);</span>
+<span class="fc" id="L350">            adjusted = ZERO;</span>
+<span class="fc bfc" id="L351" title="All 2 branches covered.">        } else if (submission.attemptNumber() == policy.maximumAttempts()) {</span>
+<span class="fc" id="L352">            warnings.add(&quot;FINAL_ALLOWED_ATTEMPT&quot;);</span>
+        }
+<span class="fc" id="L354">        return money(adjusted.max(BigDecimal.ZERO));</span>
+    }
+
+    private Map&lt;String, Integer&gt; calculateSections(
+            Map&lt;String, BigDecimal&gt; sectionEarned,
+            Map&lt;String, BigDecimal&gt; sectionMaximum,
+            ExamSubmission submission,
+            GradingPolicy policy,
+            List&lt;String&gt; failures
+    ) {
+<span class="fc" id="L364">        Map&lt;String, Integer&gt; percentages = new HashMap&lt;&gt;();</span>
+<span class="fc bfc" id="L365" title="All 2 branches covered.">        for (Map.Entry&lt;String, BigDecimal&gt; entry : sectionMaximum.entrySet()) {</span>
+<span class="fc" id="L366">            BigDecimal maximum = entry.getValue();</span>
+<span class="fc" id="L367">            BigDecimal earned = sectionEarned.getOrDefault(entry.getKey(), ZERO).max(BigDecimal.ZERO);</span>
+<span class="pc bpc" id="L368" title="1 of 2 branches missed.">            int percent = maximum.signum() == 0</span>
+<span class="nc" id="L369">                    ? 0</span>
+<span class="fc" id="L370">                    : earned.multiply(BigDecimal.valueOf(100))</span>
+<span class="fc" id="L371">                    .divide(maximum, 0, RoundingMode.HALF_UP)</span>
+<span class="fc" id="L372">                    .intValue();</span>
+<span class="fc" id="L373">            percent = Math.max(0, Math.min(100, percent));</span>
+<span class="fc" id="L374">            percentages.put(entry.getKey(), percent);</span>
+<span class="fc" id="L375">            int required = submission.sectionPassPercentages()</span>
+<span class="fc" id="L376">                    .getOrDefault(entry.getKey(), policy.minimumSectionPercentage());</span>
+<span class="fc bfc" id="L377" title="All 2 branches covered.">            if (percent &lt; required) {</span>
+<span class="fc" id="L378">                failures.add(&quot;SECTION_BELOW_PASS_MARK:&quot; + entry.getKey());</span>
+            }
+<span class="fc" id="L380">        }</span>
+<span class="fc bfc" id="L381" title="All 2 branches covered.">        for (String requiredSection : submission.sectionPassPercentages().keySet()) {</span>
+<span class="fc bfc" id="L382" title="All 2 branches covered.">            if (!percentages.containsKey(requiredSection)) {</span>
+<span class="fc" id="L383">                percentages.put(requiredSection, 0);</span>
+<span class="fc" id="L384">                failures.add(&quot;REQUIRED_SECTION_MISSING:&quot; + requiredSection);</span>
+            }
+<span class="fc" id="L386">        }</span>
+<span class="fc" id="L387">        return percentages;</span>
+    }
+
+    private void evaluateSubmissionIntegrity(
+            ExamSubmission submission,
+            GradingPolicy policy,
+            List&lt;String&gt; failures,
+            List&lt;String&gt; warnings
+    ) {
+<span class="fc bfc" id="L396" title="All 2 branches covered.">        if (!submission.termsAccepted()) {</span>
+<span class="fc" id="L397">            failures.add(&quot;EXAM_TERMS_NOT_ACCEPTED&quot;);</span>
+        }
+<span class="fc bfc" id="L399" title="All 2 branches covered.">        if (submission.suspendedAccount()) {</span>
+<span class="fc" id="L400">            failures.add(&quot;ACCOUNT_SUSPENDED&quot;);</span>
+        }
+<span class="pc bpc" id="L402" title="1 of 4 branches missed.">        if (policy.identityVerificationRequired() &amp;&amp; !submission.identityVerified()) {</span>
+<span class="fc" id="L403">            failures.add(&quot;IDENTITY_NOT_VERIFIED&quot;);</span>
+<span class="fc bfc" id="L404" title="All 2 branches covered.">        } else if (!submission.identityVerified()) {</span>
+<span class="fc" id="L405">            warnings.add(&quot;IDENTITY_NOT_VERIFIED&quot;);</span>
+        }
+<span class="fc bfc" id="L407" title="All 2 branches covered.">        if (submission.proctorDisconnected()) {</span>
+<span class="fc" id="L408">            warnings.add(&quot;PROCTOR_CONNECTION_LOST&quot;);</span>
+        }
+<span class="fc bfc" id="L410" title="All 2 branches covered.">        if (submission.ipAddressChanged()) {</span>
+<span class="fc" id="L411">            warnings.add(&quot;IP_ADDRESS_CHANGED&quot;);</span>
+        }
+<span class="fc bfc" id="L413" title="All 2 branches covered.">        if (submission.fullscreenExitCount() == 1) {</span>
+<span class="fc" id="L414">            warnings.add(&quot;FULLSCREEN_EXIT_RECORDED&quot;);</span>
+<span class="fc bfc" id="L415" title="All 2 branches covered.">        } else if (submission.fullscreenExitCount() == 2) {</span>
+<span class="fc" id="L416">            warnings.add(&quot;MULTIPLE_FULLSCREEN_EXITS&quot;);</span>
+<span class="fc bfc" id="L417" title="All 2 branches covered.">        } else if (submission.fullscreenExitCount() &gt;= 3) {</span>
+<span class="fc" id="L418">            failures.add(&quot;EXCESSIVE_FULLSCREEN_EXITS&quot;);</span>
+        }
+<span class="fc bfc" id="L420" title="All 4 branches covered.">        if (submission.copyPasteEventCount() &gt; 0 &amp;&amp; submission.copyPasteEventCount() &lt; 5) {</span>
+<span class="fc" id="L421">            warnings.add(&quot;COPY_PASTE_EVENTS_RECORDED&quot;);</span>
+<span class="fc bfc" id="L422" title="All 2 branches covered.">        } else if (submission.copyPasteEventCount() &gt;= 5) {</span>
+<span class="fc" id="L423">            failures.add(&quot;EXCESSIVE_COPY_PASTE_EVENTS&quot;);</span>
+        }
+<span class="fc" id="L425">    }</span>
+
+    private boolean sectionRequirementsMet(
+            Map&lt;String, Integer&gt; sections,
+            ExamSubmission submission,
+            GradingPolicy policy
+    ) {
+<span class="fc" id="L432">        return sections.entrySet().stream().allMatch(entry -&gt; entry.getValue()</span>
+<span class="fc" id="L433">                &gt;= submission.sectionPassPercentages()</span>
+<span class="fc bfc" id="L434" title="All 2 branches covered.">                .getOrDefault(entry.getKey(), policy.minimumSectionPercentage()));</span>
+    }
+
+    private boolean mandatoryRequirementsMet(ExamSubmission submission, GradingPolicy policy) {
+<span class="fc bfc" id="L438" title="All 2 branches covered.">        if (!policy.allMandatoryQuestionsRequired()) {</span>
+<span class="fc" id="L439">            return true;</span>
+        }
+<span class="fc" id="L441">        return submission.answers().stream()</span>
+<span class="fc" id="L442">                .filter(AnswerResult::mandatory)</span>
+<span class="fc" id="L443">                .allMatch(AnswerResult::answered);</span>
+    }
+
+    private boolean hasIntegrityFailure(List&lt;String&gt; failures) {
+<span class="fc bfc" id="L447" title="All 2 branches covered.">        return failures.stream().anyMatch(failure -&gt; failure.contains(&quot;INTEGRITY&quot;)</span>
+<span class="fc bfc" id="L448" title="All 2 branches covered.">                || failure.contains(&quot;IDENTITY&quot;)</span>
+<span class="fc bfc" id="L449" title="All 2 branches covered.">                || failure.contains(&quot;FULLSCREEN&quot;)</span>
+<span class="fc bfc" id="L450" title="All 2 branches covered.">                || failure.contains(&quot;COPY_PASTE&quot;)</span>
+<span class="fc bfc" id="L451" title="All 2 branches covered.">                || failure.equals(&quot;ACCOUNT_SUSPENDED&quot;));</span>
+    }
+
+    private String letterGrade(int percentage, boolean passed) {
+<span class="fc bfc" id="L455" title="All 4 branches covered.">        if (!passed &amp;&amp; percentage &lt; 60) {</span>
+<span class="fc" id="L456">            return &quot;F&quot;;</span>
+        }
+<span class="fc bfc" id="L458" title="All 2 branches covered.">        if (percentage &gt;= 95) {</span>
+<span class="fc" id="L459">            return &quot;A+&quot;;</span>
+        }
+<span class="fc bfc" id="L461" title="All 2 branches covered.">        if (percentage &gt;= 90) {</span>
+<span class="fc" id="L462">            return &quot;A&quot;;</span>
+        }
+<span class="fc bfc" id="L464" title="All 2 branches covered.">        if (percentage &gt;= 85) {</span>
+<span class="fc" id="L465">            return &quot;A-&quot;;</span>
+        }
+<span class="fc bfc" id="L467" title="All 2 branches covered.">        if (percentage &gt;= 80) {</span>
+<span class="fc" id="L468">            return &quot;B+&quot;;</span>
+        }
+<span class="fc bfc" id="L470" title="All 2 branches covered.">        if (percentage &gt;= 75) {</span>
+<span class="fc" id="L471">            return &quot;B&quot;;</span>
+        }
+<span class="fc bfc" id="L473" title="All 2 branches covered.">        if (percentage &gt;= 70) {</span>
+<span class="fc" id="L474">            return &quot;C+&quot;;</span>
+        }
+<span class="fc bfc" id="L476" title="All 2 branches covered.">        if (percentage &gt;= 65) {</span>
+<span class="fc" id="L477">            return &quot;C&quot;;</span>
+        }
+<span class="fc bfc" id="L479" title="All 2 branches covered.">        if (percentage &gt;= 60) {</span>
+<span class="fc" id="L480">            return &quot;D&quot;;</span>
+        }
+<span class="fc" id="L482">        return &quot;F&quot;;</span>
+    }
+
+    private void validate(ExamSubmission submission, GradingPolicy policy) {
+<span class="fc" id="L486">        Objects.requireNonNull(submission, &quot;submission must not be null&quot;);</span>
+<span class="fc" id="L487">        Objects.requireNonNull(policy, &quot;policy must not be null&quot;);</span>
+<span class="pc bpc" id="L488" title="1 of 4 branches missed.">        if (submission.examId() == null || submission.examId().isBlank()) {</span>
+<span class="fc" id="L489">            throw new IllegalArgumentException(&quot;examId must not be blank&quot;);</span>
+        }
+<span class="pc bpc" id="L491" title="1 of 4 branches missed.">        if (submission.studentId() == null || submission.studentId().isBlank()) {</span>
+<span class="fc" id="L492">            throw new IllegalArgumentException(&quot;studentId must not be blank&quot;);</span>
+        }
+<span class="fc bfc" id="L494" title="All 4 branches covered.">        if (submission.startedAt() == null || submission.submittedAt() == null) {</span>
+<span class="fc" id="L495">            throw new IllegalArgumentException(&quot;exam timestamps must not be null&quot;);</span>
+        }
+<span class="fc bfc" id="L497" title="All 2 branches covered.">        if (submission.submittedAt().isBefore(submission.startedAt())) {</span>
+<span class="fc" id="L498">            throw new IllegalArgumentException(&quot;submittedAt must not be before startedAt&quot;);</span>
+        }
+<span class="fc bfc" id="L500" title="All 2 branches covered.">        if (submission.allowedDurationSeconds() &lt; 0) {</span>
+<span class="fc" id="L501">            throw new IllegalArgumentException(&quot;allowedDurationSeconds must not be negative&quot;);</span>
+        }
+<span class="fc bfc" id="L503" title="All 2 branches covered.">        if (submission.attemptNumber() &lt;= 0) {</span>
+<span class="fc" id="L504">            throw new IllegalArgumentException(&quot;attemptNumber must be positive&quot;);</span>
+        }
+<span class="fc bfc" id="L506" title="All 4 branches covered.">        if (submission.fullscreenExitCount() &lt; 0 || submission.copyPasteEventCount() &lt; 0) {</span>
+<span class="fc" id="L507">            throw new IllegalArgumentException(&quot;integrity event counts must not be negative&quot;);</span>
+        }
+<span class="fc bfc" id="L509" title="All 4 branches covered.">        if (submission.bonusPoints() == null || submission.bonusPoints().signum() &lt; 0) {</span>
+<span class="fc" id="L510">            throw new IllegalArgumentException(&quot;bonusPoints must not be negative&quot;);</span>
+        }
+<span class="fc bfc" id="L512" title="All 2 branches covered.">        if (submission.instructorOverridePercent() != null</span>
+<span class="fc bfc" id="L513" title="All 2 branches covered.">                &amp;&amp; (submission.instructorOverridePercent() &lt; 0</span>
+<span class="fc bfc" id="L514" title="All 2 branches covered.">                || submission.instructorOverridePercent() &gt; 100)) {</span>
+<span class="fc" id="L515">            throw new IllegalArgumentException(&quot;override percentage must be between 0 and 100&quot;);</span>
+        }
+<span class="fc" id="L517">        validatePolicy(policy);</span>
+<span class="fc" id="L518">        Set&lt;String&gt; ids = new HashSet&lt;&gt;();</span>
+<span class="fc bfc" id="L519" title="All 2 branches covered.">        for (AnswerResult answer : submission.answers()) {</span>
+<span class="fc" id="L520">            validateAnswer(answer);</span>
+<span class="fc bfc" id="L521" title="All 2 branches covered.">            if (!ids.add(answer.questionId())) {</span>
+<span class="fc" id="L522">                throw new IllegalArgumentException(&quot;questionId must be unique&quot;);</span>
+            }
+<span class="fc" id="L524">        }</span>
+<span class="fc bfc" id="L525" title="All 2 branches covered.">        for (Map.Entry&lt;String, Integer&gt; entry : submission.sectionPassPercentages().entrySet()) {</span>
+<span class="pc bpc" id="L526" title="1 of 4 branches missed.">            if (entry.getKey() == null || entry.getKey().isBlank()) {</span>
+<span class="fc" id="L527">                throw new IllegalArgumentException(&quot;section name must not be blank&quot;);</span>
+            }
+<span class="fc bfc" id="L529" title="All 4 branches covered.">            if (entry.getValue() &lt; 0 || entry.getValue() &gt; 100) {</span>
+<span class="fc" id="L530">                throw new IllegalArgumentException(&quot;section percentage must be between 0 and 100&quot;);</span>
+            }
+<span class="fc" id="L532">        }</span>
+<span class="fc" id="L533">    }</span>
+
+    private void validatePolicy(GradingPolicy policy) {
+<span class="pc bpc" id="L536" title="1 of 4 branches missed.">        if (policy.passPercentage() &lt; 0 || policy.passPercentage() &gt; 100) {</span>
+<span class="fc" id="L537">            throw new IllegalArgumentException(&quot;passPercentage must be between 0 and 100&quot;);</span>
+        }
+<span class="pc bpc" id="L539" title="1 of 2 branches missed.">        if (policy.wrongAnswerPenaltyRate() == null</span>
+<span class="fc bfc" id="L540" title="All 2 branches covered.">                || policy.wrongAnswerPenaltyRate().signum() &lt; 0</span>
+<span class="fc bfc" id="L541" title="All 2 branches covered.">                || policy.wrongAnswerPenaltyRate().compareTo(BigDecimal.ONE) &gt; 0) {</span>
+<span class="fc" id="L542">            throw new IllegalArgumentException(&quot;wrongAnswerPenaltyRate must be between 0 and 1&quot;);</span>
+        }
+<span class="pc bpc" id="L544" title="1 of 2 branches missed.">        if (policy.unansweredPenaltyRate() == null</span>
+<span class="fc bfc" id="L545" title="All 2 branches covered.">                || policy.unansweredPenaltyRate().signum() &lt; 0</span>
+<span class="fc bfc" id="L546" title="All 2 branches covered.">                || policy.unansweredPenaltyRate().compareTo(BigDecimal.ONE) &gt; 0) {</span>
+<span class="fc" id="L547">            throw new IllegalArgumentException(&quot;unansweredPenaltyRate must be between 0 and 1&quot;);</span>
+        }
+<span class="fc bfc" id="L549" title="All 2 branches covered.">        if (policy.latePenaltyPercentPerHour() &lt; 0</span>
+<span class="pc bpc" id="L550" title="1 of 2 branches missed.">                || policy.maximumLatePenaltyPercent() &lt; 0</span>
+<span class="fc bfc" id="L551" title="All 2 branches covered.">                || policy.maximumLatePenaltyPercent() &gt; 100) {</span>
+<span class="fc" id="L552">            throw new IllegalArgumentException(&quot;late penalties must be between 0 and 100&quot;);</span>
+        }
+<span class="pc bpc" id="L554" title="1 of 4 branches missed.">        if (policy.minimumSectionPercentage() &lt; 0 || policy.minimumSectionPercentage() &gt; 100) {</span>
+<span class="fc" id="L555">            throw new IllegalArgumentException(&quot;minimumSectionPercentage must be between 0 and 100&quot;);</span>
+        }
+<span class="fc bfc" id="L557" title="All 2 branches covered.">        if (policy.maximumAttempts() &lt;= 0) {</span>
+<span class="fc" id="L558">            throw new IllegalArgumentException(&quot;maximumAttempts must be positive&quot;);</span>
+        }
+<span class="fc" id="L560">    }</span>
+
+    private void validateAnswer(AnswerResult answer) {
+<span class="fc" id="L563">        Objects.requireNonNull(answer, &quot;answer must not be null&quot;);</span>
+<span class="pc bpc" id="L564" title="1 of 4 branches missed.">        if (answer.questionId() == null || answer.questionId().isBlank()) {</span>
+<span class="fc" id="L565">            throw new IllegalArgumentException(&quot;questionId must not be blank&quot;);</span>
+        }
+<span class="fc bfc" id="L567" title="All 2 branches covered.">        if (answer.type() == null) {</span>
+<span class="fc" id="L568">            throw new IllegalArgumentException(&quot;question type must not be null&quot;);</span>
+        }
+<span class="pc bpc" id="L570" title="1 of 4 branches missed.">        if (answer.section() == null || answer.section().isBlank()) {</span>
+<span class="fc" id="L571">            throw new IllegalArgumentException(&quot;section must not be blank&quot;);</span>
+        }
+<span class="fc bfc" id="L573" title="All 4 branches covered.">        if (answer.maximumPoints() == null || answer.maximumPoints().signum() &lt;= 0) {</span>
+<span class="fc" id="L574">            throw new IllegalArgumentException(&quot;maximumPoints must be positive&quot;);</span>
+        }
+<span class="fc bfc" id="L576" title="All 2 branches covered.">        if (answer.correctOptionCount() &lt; 0</span>
+<span class="fc bfc" id="L577" title="All 2 branches covered.">                || answer.selectedCorrectOptions() &lt; 0</span>
+<span class="fc bfc" id="L578" title="All 2 branches covered.">                || answer.selectedIncorrectOptions() &lt; 0) {</span>
+<span class="fc" id="L579">            throw new IllegalArgumentException(&quot;option counts must not be negative&quot;);</span>
+        }
+<span class="fc bfc" id="L581" title="All 2 branches covered.">        if (answer.selectedCorrectOptions() &gt; answer.correctOptionCount()) {</span>
+<span class="fc" id="L582">            throw new IllegalArgumentException(&quot;selected correct options exceed available options&quot;);</span>
+        }
+<span class="fc bfc" id="L584" title="All 4 branches covered.">        if (answer.numericTolerance() != null &amp;&amp; answer.numericTolerance().signum() &lt; 0) {</span>
+<span class="fc" id="L585">            throw new IllegalArgumentException(&quot;numericTolerance must not be negative&quot;);</span>
+        }
+<span class="pc bpc" id="L587" title="1 of 4 branches missed.">        if (answer.rubricPercent() &lt; 0 || answer.rubricPercent() &gt; 100) {</span>
+<span class="fc" id="L588">            throw new IllegalArgumentException(&quot;rubricPercent must be between 0 and 100&quot;);</span>
+        }
+<span class="pc bpc" id="L590" title="2 of 4 branches missed.">        if (answer.passedTests() &lt; 0 || answer.totalTests() &lt; 0</span>
+<span class="fc bfc" id="L591" title="All 2 branches covered.">                || answer.passedTests() &gt; answer.totalTests()) {</span>
+<span class="fc" id="L592">            throw new IllegalArgumentException(&quot;program test counts are invalid&quot;);</span>
+        }
+<span class="pc bpc" id="L594" title="1 of 4 branches missed.">        if (answer.type() == QuestionType.PROGRAMMING &amp;&amp; answer.answered()</span>
+<span class="fc bfc" id="L595" title="All 4 branches covered.">                &amp;&amp; answer.compilationSucceeded() &amp;&amp; answer.totalTests() == 0</span>
+<span class="fc bfc" id="L596" title="All 2 branches covered.">                &amp;&amp; !answer.manualReviewRequired()) {</span>
+<span class="fc" id="L597">            throw new IllegalArgumentException(&quot;compiled program requires tests or manual review&quot;);</span>
+        }
+<span class="fc" id="L599">    }</span>
+
+    private BigDecimal money(BigDecimal value) {
+<span class="fc" id="L602">        return value.setScale(2, RoundingMode.HALF_UP);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

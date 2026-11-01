@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ArithmeticExpression.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">online-math-expression-grading</a> &gt; <a href="index.source.html" class="el_package">net.mooctest.expression.engine</a> &gt; <span class="el_source">ArithmeticExpression.java</span></div><h1>ArithmeticExpression.java</h1><pre class="source lang-java linenums">package net.mooctest.expression.engine;
+
+import java.math.BigDecimal;
+
+/** Evaluates decimal arithmetic with addition, subtraction, multiplication and parentheses. */
+public final class ArithmeticExpression {
+    private final String input;
+    private int position;
+
+<span class="fc" id="L10">    private ArithmeticExpression(String input) {</span>
+<span class="fc" id="L11">        this.input = input;</span>
+<span class="fc" id="L12">    }</span>
+
+    public static boolean supports(String expression) {
+<span class="fc bfc" id="L15" title="All 4 branches covered.">        return expression != null &amp;&amp; expression.matches(&quot;[0-9.()+*\\-\\s]+&quot;);</span>
+    }
+
+    public static BigDecimal evaluate(String expression) {
+<span class="fc bfc" id="L19" title="All 2 branches covered.">        if (!supports(expression)) {</span>
+<span class="fc" id="L20">            throw new IllegalArgumentException(&quot;unsupported arithmetic expression&quot;);</span>
+        }
+<span class="fc" id="L22">        ArithmeticExpression parser = new ArithmeticExpression(expression);</span>
+<span class="fc" id="L23">        BigDecimal result = parser.sum();</span>
+<span class="fc" id="L24">        parser.skipSpaces();</span>
+<span class="fc bfc" id="L25" title="All 2 branches covered.">        if (parser.position != expression.length()) {</span>
+<span class="fc" id="L26">            throw new IllegalArgumentException(&quot;unexpected token in expression&quot;);</span>
+        }
+<span class="fc" id="L28">        return result;</span>
+    }
+
+    private BigDecimal sum() {
+<span class="fc" id="L32">        BigDecimal value = product();</span>
+        while (true) {
+<span class="fc" id="L34">            skipSpaces();</span>
+<span class="fc bfc" id="L35" title="All 2 branches covered.">            if (take('+')) {</span>
+<span class="fc" id="L36">                value = value.add(product());</span>
+<span class="fc bfc" id="L37" title="All 2 branches covered.">            } else if (take('-')) {</span>
+<span class="fc" id="L38">                value = value.subtract(product());</span>
+            } else {
+<span class="fc" id="L40">                return value;</span>
+            }
+        }
+    }
+
+    private BigDecimal product() {
+<span class="fc" id="L46">        BigDecimal value = unary();</span>
+        while (true) {
+<span class="fc" id="L48">            skipSpaces();</span>
+<span class="fc bfc" id="L49" title="All 2 branches covered.">            if (take('*')) {</span>
+<span class="fc" id="L50">                value = value.multiply(unary());</span>
+            } else {
+<span class="fc" id="L52">                return value;</span>
+            }
+        }
+    }
+
+    private BigDecimal unary() {
+<span class="fc" id="L58">        skipSpaces();</span>
+<span class="fc bfc" id="L59" title="All 2 branches covered.">        if (take('+')) {</span>
+<span class="fc" id="L60">            return unary();</span>
+        }
+<span class="fc bfc" id="L62" title="All 2 branches covered.">        if (take('-')) {</span>
+<span class="fc" id="L63">            return unary().negate();</span>
+        }
+<span class="fc" id="L65">        return atom();</span>
+    }
+
+    private BigDecimal atom() {
+<span class="fc" id="L69">        skipSpaces();</span>
+<span class="fc bfc" id="L70" title="All 2 branches covered.">        if (take('(')) {</span>
+<span class="fc" id="L71">            BigDecimal value = sum();</span>
+<span class="fc" id="L72">            skipSpaces();</span>
+<span class="fc bfc" id="L73" title="All 2 branches covered.">            if (!take(')')) {</span>
+<span class="fc" id="L74">                throw new IllegalArgumentException(&quot;missing closing parenthesis&quot;);</span>
+            }
+<span class="fc" id="L76">            return value;</span>
+        }
+<span class="fc" id="L78">        int start = position;</span>
+<span class="fc bfc" id="L79" title="All 2 branches covered.">        while (position &lt; input.length()) {</span>
+<span class="fc" id="L80">            char current = input.charAt(position);</span>
+<span class="fc bfc" id="L81" title="All 4 branches covered.">            if (Character.isDigit(current) || current == '.') {</span>
+<span class="fc" id="L82">                position++;</span>
+            } else {
+                break;
+            }
+<span class="fc" id="L86">        }</span>
+<span class="fc bfc" id="L87" title="All 2 branches covered.">        if (start == position) {</span>
+<span class="fc" id="L88">            throw new IllegalArgumentException(&quot;expected a number&quot;);</span>
+        }
+<span class="fc" id="L90">        return new BigDecimal(input.substring(start, position));</span>
+    }
+
+    private boolean take(char expected) {
+<span class="fc bfc" id="L94" title="All 4 branches covered.">        if (position &lt; input.length() &amp;&amp; input.charAt(position) == expected) {</span>
+<span class="fc" id="L95">            position++;</span>
+<span class="fc" id="L96">            return true;</span>
+        }
+<span class="fc" id="L98">        return false;</span>
+    }
+
+    private void skipSpaces() {
+<span class="fc bfc" id="L102" title="All 4 branches covered.">        while (position &lt; input.length() &amp;&amp; Character.isWhitespace(input.charAt(position))) {</span>
+<span class="fc" id="L103">            position++;</span>
+        }
+<span class="fc" id="L105">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>
